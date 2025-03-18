@@ -1,0 +1,29 @@
+[package]
+name = "yaoi"
+version = "0.0.1-pre0"
+edition = "2021"
+description = "yaws io_uring I/O"
+homepage = "https://github.com/yaws-rs/yaoi"
+keywords = ["io", "uring", "epoll", "async"]
+license = "Apache-2.0/MIT"
+readme = "README.md"
+repository = "https://github.com/yaws-rs/yaoi"
+categories = ["science"]
+
+[dependencies]
+capacity = "0.1"
+hashbrown = "0.15.2"
+io-uring-bearer = { path = "../io_uring-utils/io-uring-bearer" }
+io-uring-opcode = { path = "../io_uring-utils/io-uring-opcode" }
+io-uring-owner  = { path = "../io_uring-utils/io-uring-owner" }
+libc = "0.2.170"
+nohash-hasher = "0.2.0"
+ysockaddr = { version = "0.1.0", path = "../ylibc/ysockaddr" }
+#ysockaddr = { version = "0.1.0" }
+
+[features]
+default = []
+#epoll = ["io-uring-opcode/epoll"]
+
+#[package.metadata.docs.rs]
+#features = ["epoll"]
