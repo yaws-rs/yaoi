@@ -1,7 +1,5 @@
 //! Yaoi Macros
 
-use crate::error::YaoiError;
-
 /// Helper macro to execute a system call
 macro_rules! syscall {
     ($fn: ident ( $($arg: expr),* $(,)* ) ) => {{

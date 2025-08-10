@@ -15,6 +15,8 @@ pub enum YaoiError {
     /// Misc Yaoi Bug that should cause a controlled panic downstream.
     /// This should be reported.
     Bug(String),
+    /// Underlying io-uring Originating error
+    IoUring(std::io::Error),
 }
 
 impl Display for YaoiError {
@@ -23,7 +25,8 @@ impl Display for YaoiError {
             Self::StdIo(e) => write!(f, "StdIo: {}", e),
             Self::Bearer(e) => write!(f, "UringBearer: {}", e),
             Self::Bug(e) => write!(f, "Yaoi Bug: {}", e),
-        }        
+            Self::IoUring(e) => write!(f, "Yaoi IoUring: {}", e),
+        }
     }
 }
 

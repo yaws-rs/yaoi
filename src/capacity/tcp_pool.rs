@@ -1,7 +1,7 @@
 //! Translate Yaoi Capacities for TcpPool
 
-use io_uring_bearer::BearerCapacityKind;
 use capacity::{Capacity, Setting};
+use io_uring_bearer::BearerCapacityKind;
 
 #[derive(Clone, Debug)]
 pub(crate) struct TcpPoolCapacity {
@@ -13,7 +13,7 @@ impl Setting<BearerCapacityKind> for TcpPoolCapacity {
         match v {
             // Assume every TcpPool item requires 3* queue capacity
             BearerCapacityKind::CoreQueue => self.pool_count * 3,
-            // Assume every TcpPool item requires one RegisteredFd            
+            // Assume every TcpPool item requires one RegisteredFd
             BearerCapacityKind::RegisteredFd => self.pool_count,
             // Assume every TcpPool item requires 3* pending completions capacity
             BearerCapacityKind::PendingCompletions => self.pool_count * 3,
@@ -25,7 +25,9 @@ impl Setting<BearerCapacityKind> for TcpPoolCapacity {
 }
 
 impl TcpPoolCapacity {
-    pub(crate) fn provide(pool_count: usize) -> Capacity::<TcpPoolCapacity, BearerCapacityKind> {
-        Capacity::<TcpPoolCapacity, BearerCapacityKind>::with_planned(TcpPoolCapacity { pool_count })
+    pub(crate) fn provide(pool_count: usize) -> Capacity<TcpPoolCapacity, BearerCapacityKind> {
+        Capacity::<TcpPoolCapacity, BearerCapacityKind>::with_planned(TcpPoolCapacity {
+            pool_count,
+        })
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "yaoi"
-version = "0.0.1-pre0"
+version = "0.0.0-scratch0"
 edition = "2021"
 description = "yaws io_uring I/O"
 homepage = "https://github.com/yaws-rs/yaoi"
@@ -13,16 +13,21 @@ categories = ["science"]
 [dependencies]
 capacity = "0.1"
 hashbrown = "0.15.2"
-io-uring-bearer = { path = "../io_uring-utils/io-uring-bearer" }
-io-uring-opcode = { path = "../io_uring-utils/io-uring-opcode" }
-io-uring-owner  = { path = "../io_uring-utils/io-uring-owner" }
+io-uring-bearer = { path = "../io_uring-utils/io-uring-bearer", version = "0.2.0-pre3", features = ["accept_multi", "connect", "socket"] }
+io-uring-opcode = { path = "../io_uring-utils/io-uring-opcode", version = "0.2.0-pre3", features = ["accept_multi", "connect", "socket"] }
+io-uring-opcode-sets = { path = "../io_uring-utils/io-uring-opcode-sets", version = "0.0.1-whatever0", features = ["accept_multi", "connect", "socket"] }
+io-uring-owner  = { path = "../io_uring-utils/io-uring-owner", version = "0.2.0-pre1" }
+io-uring-op-accept-multi = { version = "0.0.1", path = "../io_uring-utils/ops/op-accept-multi" }
+io-uring-op-connect = { version = "0.0.1", path = "../io_uring-utils/ops/op-connect" }
+io-uring-op-socket = { version = "0.0.1", path = "../io_uring-utils/ops/op-socket" }
 libc = "0.2.170"
 nohash-hasher = "0.2.0"
-ysockaddr = { version = "0.1.0", path = "../ylibc/ysockaddr" }
-#ysockaddr = { version = "0.1.0" }
+ysockaddr = { version = "0.2.0" }
+thingbuf = { version = "0.1", features = ["static"] }
 
 [features]
 default = []
+#connect = ["dep:io-uring-op-connect"]
 #epoll = ["io-uring-opcode/epoll"]
 
 #[package.metadata.docs.rs]

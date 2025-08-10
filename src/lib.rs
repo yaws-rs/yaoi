@@ -6,12 +6,18 @@
     unused_qualifications
 )]
 #![doc = include_str!("../README.md")]
+#![allow(unused_imports)]
 
 //-----------------------------------------------
 // Internal Macros
 //-----------------------------------------------
 #[macro_use]
 pub(crate) mod macros;
+
+//-----------------------------------------------
+// Internal Types
+//-----------------------------------------------
+pub(crate) mod cmaps; // Conversion maps
 
 //-----------------------------------------------
 // All Errors
@@ -22,10 +28,10 @@ pub(crate) mod capacity;
 pub mod strategy;
 
 //-----------------------------------------------
-// TcpPool
+// TCP Pools
 //-----------------------------------------------
 mod tcp_pool;
-pub use tcp_pool::TcpPool;
+pub use tcp_pool::tcp_client_pool::TcpClientPool;
 
 //-----------------------------------------------
 // TcpStream

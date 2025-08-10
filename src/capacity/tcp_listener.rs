@@ -1,7 +1,7 @@
 //! Yaoi Capacities
 
-use io_uring_bearer::BearerCapacityKind;
 use capacity::{Capacity, Setting};
+use io_uring_bearer::BearerCapacityKind;
 
 #[derive(Clone, Debug)]
 pub(crate) struct TcpListenerCapacity {
@@ -21,7 +21,9 @@ impl Setting<BearerCapacityKind> for TcpListenerCapacity {
 }
 
 impl TcpListenerCapacity {
-    pub(crate) fn provide(q_count: usize) -> Capacity::<TcpListenerCapacity, BearerCapacityKind> {
-        Capacity::<TcpListenerCapacity, BearerCapacityKind>::with_planned(TcpListenerCapacity { q_count })
+    pub(crate) fn provide(q_count: usize) -> Capacity<TcpListenerCapacity, BearerCapacityKind> {
+        Capacity::<TcpListenerCapacity, BearerCapacityKind>::with_planned(TcpListenerCapacity {
+            q_count,
+        })
     }
 }
