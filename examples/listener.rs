@@ -27,23 +27,14 @@ fn main() {
         })
         .unwrap();
 
-    //    let remaining_serves = server_pool.serve_with_cb(&mut ud_serve, |ud, stream| {
-    //        println!("Server/Stream {:?} connected", stream);
-    //    }).unwrap();
-
     loop {
         let mut ud_accept = AcceptInfo;
-
-        println!("---- SLeep 1 -----");
 
         client_pool.check::<32>(&mut ud_connect).unwrap();
 
         listener
             .accept_with_cb(&mut ud_accept, |u, fno_res, opt_sa| {
-                println!(
-                    "Accepted: hmmm..? fno_res = {}, opt_sa => {:?}",
-                    fno_res, opt_sa
-                );
+                println!("Accepted FileNo {}, Peer Address => {:?}", fno_res, opt_sa);
             })
             .unwrap();
 
