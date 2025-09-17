@@ -1,13 +1,27 @@
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use yaoi::strategy::StrategyListener;
+use yaoi::BlueprintsLayers;
 use yaoi::TcpClientPool;
 use yaoi::TcpListener;
 
 use std::thread::sleep;
 use std::time::Duration;
 
+use blueprint::BluePrint;
+use blueprint::Orbit;
+use blueprint_tick_tock::TickTock;
+use blueprint_tls::{TlsClient, TlsServer};
+use blueprint_tls::{TlsClientConfig, TlsServerConfig};
+use blueprints_known::Orbits;
+
 struct ConnectInfo;
 struct AcceptInfo;
+
+use std::path::Path;
+
+const CA: &'static str = "../../../tls/blueprint/certs/ca.rsa4096.crt";
+const CERT: &'static str = "../../../tls/blueprint/certs/rustcryp.to.rsa4096.ca_signed.crt";
+const KEY: &'static str = "../../../tls/blueprint/certs/rustcryp.to.rsa4096.key";
 
 fn main() {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8181);
@@ -17,6 +31,18 @@ fn main() {
     let mut listener = TcpListener::listen_with_strategy(addr, 16, listener_strategy).unwrap();
 
     let mut client_pool = TcpClientPool::with_capacity(16).unwrap();
+
+    let tls_config_server =
+        TlsServerConfig::with_certs_and_key_file(Path::new(CA), Path::new(CERT), Path::new(KEY))
+            .unwrap();
+    let tls_config_client = TlsClientConfig::with_hostname("localhost").unwrap();
+
+    let client_context =
+        blueprint_tls::TlsContext::Client(TlsClient::with_config(tls_config_client).unwrap());
+    let client_blueprints = BlueprintsLayers::<1>::layers([Orbits::Tls(client_context)])
+        .app(Orbits::TickTock(TickTock::with_defaults().unwrap()));
+
+    client_pool.blueprints(client_blueprints);
 
     let mut ud_connect = ConnectInfo;
     let mut ud_serve = ConnectInfo;

@@ -21,6 +21,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
 
 [[package]]
+name = "blueprint"
+version = "0.0.1"
+
+[[package]]
 name = "capacity"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -416,6 +420,7 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 name = "yaoi"
 version = "0.0.0-scratch0"
 dependencies = [
+ "blueprint",
  "capacity",
  "hashbrown",
  "io-uring-bearer",

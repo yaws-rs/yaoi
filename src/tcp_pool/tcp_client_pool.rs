@@ -4,6 +4,7 @@ use crate::cmaps::MapConnected;
 use crate::error::YaoiError;
 use crate::Dummy;
 use crate::TcpStream;
+use crate::Blueprints;
 
 use core::marker::PhantomData;
 use core::net::SocketAddr;
@@ -31,9 +32,12 @@ pub enum SlotCtx {
     Shutdown,
 }
 
-pub struct TcpClientPool<Cfun, Cdata>
+use blueprint::Orbit;
+
+pub struct TcpClientPool<Cfun, Cdata, const Layers: usize, O>
 where
     Cfun: Fn(&mut Cdata, &TcpStream) -> (),
+    O: Orbit
 {
     bearer: UringBearer<Wrapper>,
     pool: HashMap<u32, SlotCtx, BuildNoHashHasher<u32>>,
@@ -46,6 +50,7 @@ where
     state_connected: usize,
     state_shutdown: usize,
 
+    blueprints: Option<Blueprints<Layers, O>>,
     cd: PhantomData<Cdata>,
 }
 
@@ -59,7 +64,7 @@ use io_uring_opcode::{OpCode, OpCompletion};
 
 use thingbuf::StaticThingBuf;
 
-impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b TcpStream), Cdata> TcpClientPool<Cfun, Cdata> {
+impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b TcpStream), Cdata, const Layers: usize, O: Orbit> TcpClientPool<Cfun, Cdata, Layers, O> {
     /// Create a new TcpClientPool with pool_cap count of streams.
     pub fn with_capacity(pool_cap: usize) -> Result<Self, YaoiError> {
         let cap = crate::capacity::TcpPoolCapacity::provide(pool_cap);
@@ -82,7 +87,12 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b TcpStream), Cdata> TcpClientPool<Cf
             state_connected: 0,
             state_shutdown: 0,
             state_error: 0,
+            blueprints: None,
         })
+    }
+    /// Blueprints support
+    pub fn blueprints(&mut self, bp: Blueprints<Layers, O>) -> () {
+        self.blueprints = Some(bp);
     }
     /// Connect the whole TcpClientPool with calback cb upon connection established.
     pub fn connect_with_cb(
@@ -163,7 +173,7 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b TcpStream), Cdata> TcpClientPool<Cf
                 .handle_completions(&mut user, Some(N as u32), |user, entry, rec| {
                     match rec {
                         Completion::Socket(s) => {
-                            println!("Rec<{:?}>, Entry<{:?}> Socketed = {:?}", rec, entry, s);
+                            // We can just forget given we linked it.
                             SubmissionRecordStatus::Forget
                         }
                         Completion::Connect(c) => {

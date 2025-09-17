@@ -1,0 +1,25 @@
+[package]
+name = "yaoi-example-blueprint-tls-tick-tock"
+version = "0.0.1"
+edition = "2021"
+description = "Static state machine / protocol blueprints tls example"
+homepage = "https://github.com/yaws-rs/yaoi"
+keywords = ["io", "uring", "epoll", "async"]
+license = "Apache-2.0/MIT"
+readme = "README.md"
+repository = "https://github.com/yaws-rs/blueprint"
+categories = ["science"]
+
+[dependencies]
+blueprint = { path = "../../../blueprint", version = "0.0.1", default-features = false }
+blueprints-known = { path = "../../../blueprint/known", version = "0.0.1", default-features = false, features = ["tls", "tick-tock"] }
+blueprint-tls = { path = "../../../tls/blueprint", version = "0.0.1", default-features = false, features = ["std", "util"] }
+blueprint-tick-tock = { path = "../../../blueprint/tick-tock", default-features = false }
+yaoi = { path = "../../", version = "0.0.0-scratch0", default-features = false }
+
+[features]
+default = []
+std = []
+
+[package.metadata.docs.rs]
+features = []

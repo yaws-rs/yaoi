@@ -11,6 +11,7 @@ repository = "https://github.com/yaws-rs/yaoi"
 categories = ["science"]
 
 [dependencies]
+blueprint = { path = "../blueprint", version = "0.0.1", default-features = false }
 capacity = "0.1"
 hashbrown = "0.15.2"
 io-uring-bearer = { path = "../io_uring-utils/io-uring-bearer", version = "0.2.0-pre3", features = ["accept_multi", "connect", "socket"] }

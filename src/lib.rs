@@ -45,6 +45,9 @@ pub use tcp_stream::TcpStream;
 mod tcp_listener;
 pub use tcp_listener::TcpListener;
 
+mod blueprints;
+pub use blueprints::*;
+
 //-----------------------------------------------
 // W/a until the Bearer generic <C> is addressed
 //-----------------------------------------------
