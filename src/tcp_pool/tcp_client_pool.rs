@@ -2,9 +2,9 @@
 
 use crate::cmaps::MapConnected;
 use crate::error::YaoiError;
-use crate::Dummy;
-use crate::TcpStream;
 use crate::Blueprints;
+use crate::Dummy;
+use crate::{EntConnected, EntHugeTlb, TcpStream};
 
 use core::marker::PhantomData;
 use core::net::SocketAddr;
@@ -22,6 +22,8 @@ use io_uring_opcode_sets::Wrapper;
 use io_uring_bearer::SubmissionFlags;
 use io_uring_bearer::UringBearer;
 
+use hugepage::HugePageBytes;
+
 #[derive(Debug, Default)]
 pub enum SlotCtx {
     #[default]
@@ -32,12 +34,9 @@ pub enum SlotCtx {
     Shutdown,
 }
 
-use blueprint::Orbit;
-
-pub struct TcpClientPool<Cfun, Cdata, const Layers: usize, O>
+pub struct TcpClientPool<Cfun, Cdata>
 where
-    Cfun: Fn(&mut Cdata, &TcpStream) -> (),
-    O: Orbit
+    Cfun: Fn(&mut Cdata, &mut TcpStream) -> (),
 {
     bearer: UringBearer<Wrapper>,
     pool: HashMap<u32, SlotCtx, BuildNoHashHasher<u32>>,
@@ -50,7 +49,8 @@ where
     state_connected: usize,
     state_shutdown: usize,
 
-    blueprints: Option<Blueprints<Layers, O>>,
+    cfg_hugetlb: Option<hugepage::HugePageChoice>,
+
     cd: PhantomData<Cdata>,
 }
 
@@ -64,7 +64,7 @@ use io_uring_opcode::{OpCode, OpCompletion};
 
 use thingbuf::StaticThingBuf;
 
-impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b TcpStream), Cdata, const Layers: usize, O: Orbit> TcpClientPool<Cfun, Cdata, Layers, O> {
+impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpClientPool<Cfun, Cdata> {
     /// Create a new TcpClientPool with pool_cap count of streams.
     pub fn with_capacity(pool_cap: usize) -> Result<Self, YaoiError> {
         let cap = crate::capacity::TcpPoolCapacity::provide(pool_cap);
@@ -87,12 +87,17 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b TcpStream), Cdata, const Layers: us
             state_connected: 0,
             state_shutdown: 0,
             state_error: 0,
-            blueprints: None,
+            cfg_hugetlb: None,
         })
     }
-    /// Blueprints support
-    pub fn blueprints(&mut self, bp: Blueprints<Layers, O>) -> () {
-        self.blueprints = Some(bp);
+    pub fn set_hugetlb(&mut self, tlb_choice: hugepage::HugePageChoice) -> Result<(), YaoiError> {
+        match self.cfg_hugetlb {
+            None => {
+                self.cfg_hugetlb = Some(tlb_choice);
+                Ok(())
+            }
+            _ => Err(YaoiError::HugeTlbAlreadySet),
+        }
     }
     /// Connect the whole TcpClientPool with calback cb upon connection established.
     pub fn connect_with_cb(
@@ -200,8 +205,8 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b TcpStream), Cdata, const Layers: us
                 None => todo!("BUG: {slot_u32} not exist? - pool: {:?}", self.pool),
             };
 
-            let tcp_stream = match connected.result {
-                0 => TcpStream::from_fixed(connected.fixed_fd),
+            let mut tcp_stream = match connected.result {
+                0 => TcpStream::Connected(EntConnected::from_fixed(connected.fixed_fd)),
                 _ => {
                     self.state_connecting -= 1;
                     self.state_error += 1;
@@ -210,11 +215,26 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b TcpStream), Cdata, const Layers: us
                 }
             };
 
+            if let Some(tlb_choice) = self.cfg_hugetlb {
+                let hugetlb_in = HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
+                let hugetlb_out = HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
+                match tcp_stream {
+                    TcpStream::Connected(ent_connected) => {
+                        tcp_stream = TcpStream::StreamingHugeTlb(EntHugeTlb::from_connected(
+                            ent_connected,
+                            hugetlb_in,
+                            hugetlb_out,
+                        ));
+                    }
+                    _ => return Err(YaoiError::Bug("Type error. Expected EntConnected?")),
+                }
+            }
+
             self.state_connecting -= 1;
             self.state_connected += 1;
 
             match &self.c_fn {
-                Some(f) => f(udata, &tcp_stream),
+                Some(f) => f(udata, &mut tcp_stream),
                 None => {}
             }
 

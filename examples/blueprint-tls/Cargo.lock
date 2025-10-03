@@ -439,6 +439,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hugepage"
+version = "0.1.0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "inout"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1302,6 +1309,7 @@ dependencies = [
  "blueprint",
  "capacity",
  "hashbrown",
+ "hugepage",
  "io-uring-bearer",
  "io-uring-op-accept-multi",
  "io-uring-op-connect",
@@ -1323,6 +1331,7 @@ dependencies = [
  "blueprint-tick-tock",
  "blueprint-tls",
  "blueprints-known",
+ "hugepage",
  "yaoi",
 ]
 

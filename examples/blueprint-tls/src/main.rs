@@ -1,6 +1,6 @@
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use yaoi::strategy::StrategyListener;
-use yaoi::BlueprintsLayers;
+use yaoi::{Blueprints, BlueprintsLayers};
 use yaoi::TcpClientPool;
 use yaoi::TcpListener;
 
@@ -23,6 +23,15 @@ const CA: &'static str = "../../../tls/blueprint/certs/ca.rsa4096.crt";
 const CERT: &'static str = "../../../tls/blueprint/certs/rustcryp.to.rsa4096.ca_signed.crt";
 const KEY: &'static str = "../../../tls/blueprint/certs/rustcryp.to.rsa4096.key";
 
+fn client_blueprints() -> Blueprints<1, Orbits> {
+    let tls_config_client = TlsClientConfig::with_hostname("localhost").unwrap();       
+    let client_context =
+        blueprint_tls::TlsContext::Client(TlsClient::with_config(tls_config_client).unwrap());
+    let client_blueprints = BlueprintsLayers::<1>::layers([Orbits::Tls(client_context)])
+        .app(Orbits::TickTock(TickTock::with_defaults().unwrap()));
+    client_blueprints
+}
+
 fn main() {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8181);
 
@@ -31,32 +40,30 @@ fn main() {
     let mut listener = TcpListener::listen_with_strategy(addr, 16, listener_strategy).unwrap();
 
     let mut client_pool = TcpClientPool::with_capacity(16).unwrap();
-
+    client_pool.set_hugetlb(hugepage::HugePageChoice::HUGE_2MB).unwrap();
+    
     let tls_config_server =
         TlsServerConfig::with_certs_and_key_file(Path::new(CA), Path::new(CERT), Path::new(KEY))
             .unwrap();
-    let tls_config_client = TlsClientConfig::with_hostname("localhost").unwrap();
 
-    let client_context =
-        blueprint_tls::TlsContext::Client(TlsClient::with_config(tls_config_client).unwrap());
-    let client_blueprints = BlueprintsLayers::<1>::layers([Orbits::Tls(client_context)])
-        .app(Orbits::TickTock(TickTock::with_defaults().unwrap()));
-
-    client_pool.blueprints(client_blueprints);
-
+    let mut bp_clients: [Blueprints::<1, Orbits>; 16] = core::array::from_fn(|_| client_blueprints());
     let mut ud_connect = ConnectInfo;
     let mut ud_serve = ConnectInfo;
 
     let remaining_connects = client_pool
-        .connect_with_cb(addr.clone(), &mut ud_connect, |ud, stream| {
-            println!("Client/Stream {:?} connected", stream);
+        .connect_with_cb(addr.clone(), &mut bp_clients, |ud, stream| {
+            let id = stream.fixed_fd().unwrap() as usize;
+            
+            println!("Client/Stream[{}] {:?} connected", id,stream);
+
+            stream.run_blueprints(&mut ud[id]).unwrap();
         })
         .unwrap();
 
     loop {
         let mut ud_accept = AcceptInfo;
 
-        client_pool.check::<32>(&mut ud_connect).unwrap();
+        client_pool.check::<32>(&mut bp_clients).unwrap();
 
         listener
             .accept_with_cb(&mut ud_accept, |u, fno_res, opt_sa| {

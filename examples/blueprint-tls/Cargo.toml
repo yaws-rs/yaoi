@@ -16,6 +16,7 @@ blueprints-known = { path = "../../../blueprint/known", version = "0.0.1", defau
 blueprint-tls = { path = "../../../tls/blueprint", version = "0.0.1", default-features = false, features = ["std", "util"] }
 blueprint-tick-tock = { path = "../../../blueprint/tick-tock", default-features = false }
 yaoi = { path = "../../", version = "0.0.0-scratch0", default-features = false }
+hugepage = { path = "../../../ylibc/hugepage", version = "0.1.0", default-features = false }
 
 [features]
 default = []
