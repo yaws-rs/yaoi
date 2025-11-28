@@ -1,0 +1,26 @@
+[package]
+name = "yaoi-example-blueprint-h11spec"
+version = "0.0.1"
+edition = "2021"
+description = "Static state machine / protocol blueprints tls http server example"
+homepage = "https://github.com/yaws-rs/yaoi"
+keywords = ["io", "uring", "epoll", "async"]
+license = "Apache-2.0/MIT"
+readme = "README.md"
+repository = "https://github.com/yaws-rs/blueprint"
+categories = ["science"]
+
+[dependencies]
+blueprint = { path = "../../../blueprint", version = "0.0.1", default-features = false }
+blueprints-known = { path = "../../../blueprint/known", version = "0.0.1", default-features = false, features = ["tls", "h11server"] }
+blueprint-tls = { path = "../../../tls/blueprint", version = "0.0.1", default-features = false, features = ["std", "util"] }
+blueprint-h11spec = { path = "../../../h11spec/blueprint", default-features = false, features = ["h11server"] }
+yaoi = { path = "../../", version = "0.0.0-scratch0", default-features = false }
+hugepage = { path = "../../../ylibc/hugepage", version = "0.1.0", default-features = false }
+
+[features]
+default = []
+std = []
+
+[package.metadata.docs.rs]
+features = []

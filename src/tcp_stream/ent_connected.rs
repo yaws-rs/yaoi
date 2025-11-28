@@ -9,6 +9,7 @@ use std::os::fd::RawFd;
 pub struct EntConnected {
     raw_fd: Option<RawFd>,
     fixed_fd: Option<u32>,
+    peer_addr: Option<SocketAddr>,
 }
 
 impl EntConnected {
@@ -17,7 +18,13 @@ impl EntConnected {
         Self {
             raw_fd: None,
             fixed_fd: Some(f_fd),
+            peer_addr: None,
         }
+    }
+    /// With a known Peer Address
+    pub fn and_peer_addr(mut self, addr: SocketAddr) -> Self {
+        self.peer_addr = Some(addr);
+        self
     }
     pub fn fixed_fd(&self) -> Option<u32> {
         self.fixed_fd

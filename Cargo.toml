@@ -15,7 +15,10 @@ blueprint = { path = "../blueprint", version = "0.0.1", default-features = false
 capacity = "0.1"
 hashbrown = "0.15.2"
 hugepage = { path = "../ylibc/hugepage", version = "0.1.0", default-features = false }
+anonymous-mmap = { path = "../ylibc/anonymous_mmap", version = "0.1.0", default-features = false }
+io-uring = { version = "0.7", default-features = false }
 io-uring-bearer = { path = "../io_uring-utils/io-uring-bearer", version = "0.2.0-pre3", features = ["accept_multi", "connect", "socket"] }
+io-uring-bufring = { path = "../io_uring-utils/io-uring-bufring", version = "0.1.0", features = ["bearer"] }
 io-uring-opcode = { path = "../io_uring-utils/io-uring-opcode", version = "0.2.0-pre3", features = ["accept_multi", "connect", "socket"] }
 io-uring-opcode-sets = { path = "../io_uring-utils/io-uring-opcode-sets", version = "0.0.1-whatever0", features = ["accept_multi", "connect", "socket"] }
 io-uring-owner  = { path = "../io_uring-utils/io-uring-owner", version = "0.2.0-pre1" }
