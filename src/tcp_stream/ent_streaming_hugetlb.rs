@@ -94,7 +94,8 @@ impl EntHugeTlb {
     pub(crate) fn send_all_out(&mut self, fixed_fd: u32, bearer: &mut UringBearer<Wrapper>) -> Result<usize, YaoiError> {
         // TOOD: guard u32 - can it overflow?
         let total_out_len = self.cursor.pos_out_end - self.cursor.pos_out_start;
-
+        let mut sent_out = 0;
+        
         println!("send_all_out = {}", total_out_len);
         
         if total_out_len == 0 {
@@ -105,12 +106,19 @@ impl EntHugeTlb {
 
         let chunks = total_out_len.div_ceil(8192); // TODO fixed bufsize
         for chunk_no in 0..chunks {
+            /*
             let chunk_len = if chunk_no == 0 {
                 total_out_len
+            }
+            else { */
+            let remaining = total_out_len - sent_out;
+            let chunk_len = if remaining < 8192 {
+                remaining
             }
             else {
                 8192
             };
+            sent_out += chunk_len;
 
             println!("chunk no = {}, buf_id = {}, len = {}", chunk_no, buf_id, chunk_len);
             
@@ -499,27 +507,27 @@ impl EntHugeTlb {
         loop {
             let _pos = match cur_level {
                 0 => {
-                    println!("------- Match: 0");
+                    //println!("------- Match: 0");
                     let mut left = self.impl_left();
                     let layers = bp.layers_as_mut(); 
                     let layer = &mut layers[cur_level];
                     let pre_lens = left.left_lens();
-                    println!("Pre/is_ready<{}>, New lens = {:?}", left.is_ready(), pre_lens);
+                    //println!("Pre/is_ready<{}>, New lens = {:?}", left.is_ready(), pre_lens);
                     
                     let _pos =
                         layer.advance_with(&mut NothingBurger, &mut left, &mut intermed);
                     let lens = left.left_lens();
 
 
-                    println!("Post/is_ready<{}>, is_blocked<{}> New lens = {:?}", left.is_ready(), left.left_in_blocked(), lens);
+                    //println!("Post/is_ready<{}>, is_blocked<{}> New lens = {:?}", left.is_ready(), left.left_in_blocked(), lens);
 
                     if lens.1 != 0 {
-                        println!("Sending out..");
+                        //println!("Sending out..");
                         return Ok(());
                     }
                     
                     if left.is_ready() == false && !left.left_in_blocked() && pre_lens.0 != lens.0 {
-                        println!("Left is not ready & not blocked with lens.0 changed w/ no output - looping..");
+                        //println!("Left is not ready & not blocked with lens.0 changed w/ no output - looping..");
                         continue;
                     }
                     
@@ -527,17 +535,18 @@ impl EntHugeTlb {
                         return Ok(());
                     }
                     cur_level += 1;
-                    println!(" ** Upgrade cur_level >> {cur_level}**");
+                    //println!(" ** Upgrade cur_level >> {cur_level}**");
                     _pos
                 }
                 // Terminal layer - App processing
                 count_layers => {
-                    println!("------- Match: Layers {cur_level}/{Layers}");
+                    //println!("------- Match: Layers {cur_level}/{Layers}");
 
                     
                     let app = bp.app_as_mut();
                     let _pos = match cur_level {
                         1 => {
+                            println!("** Invoking App");
                             let pos = app.advance_with(&mut NothingBurger, &mut intermed, &mut NoRight);
 
                             let (left_len_in, left_len_out) = intermed.left_lens();

@@ -19,12 +19,17 @@ struct AcceptInfo;
 
 use std::path::Path;
 
-const CA: &'static str = "../../../tls/blueprint/certs/ca.rsa4096.crt";
+//const CA: &'static str = "../../../tls/blueprint/certs/ca.rsa4096.crt";
 //const CA: &'static str = "../../../tls/blueprint/certs/ca.ed25519.crt";
-const CERT: &'static str = "../../../tls/blueprint/certs/rustcryp.to.rsa4096.ca_signed.crt";
+const CA: &'static str = "../../../tls/blueprint/certs/ca.prime256v1.crt";
+
+//const CERT: &'static str = "../../../tls/blueprint/certs/rustcryp.to.rsa4096.ca_signed.crt";
 //const CERT: &'static str = "../../../tls/blueprint/certs/rustcryp.to.ed25519.ca_signed.crt";
-const KEY: &'static str = "../../../tls/blueprint/certs/rustcryp.to.rsa4096.key";
+const CERT: &'static str = "../../../tls/blueprint/certs/rustcryp.to.prime256v1.ca_signed.crt";
+
+//const KEY: &'static str = "../../../tls/blueprint/certs/rustcryp.to.rsa4096.key";
 //const KEY: &'static str = "../../../tls/blueprint/certs/rustcryp.to.ed25519.key";
+const KEY: &'static str = "../../../tls/blueprint/certs/rustcryp.to.prime256v1.pem";
 
 fn clear_server_blueprints() -> Blueprints<0, Orbits> {
     BlueprintsLayers::<0>::no_layers()
@@ -47,11 +52,11 @@ fn main() {
 
     let listener_strategy = StrategyListener::replenishing(3).fixed_fds(3);
 
-    let mut listener = TcpListener::listen_with_strategy(addr, 32, listener_strategy).unwrap();
+    let mut listener = TcpListener::listen_with_strategy(addr, 64, listener_strategy).unwrap();
     listener.set_hugetlb(hugepage::HugePageChoice::HUGE_2MB).unwrap();
     
-    let mut bp_listener: [Blueprints::<1, Orbits>; 2] = core::array::from_fn(|_| tls_server_blueprints());
-//    let mut bp_listener: [Blueprints::<0, Orbits>; 2] = core::array::from_fn(|_| clear_server_blueprints());    
+//    let mut bp_listener: [Blueprints::<1, Orbits>; 2] = core::array::from_fn(|_| tls_server_blueprints());
+    let mut bp_listener: [Blueprints::<0, Orbits>; 2] = core::array::from_fn(|_| clear_server_blueprints());    
 
     // Setup Listener behaviour on_accept
     listener
@@ -62,8 +67,7 @@ fn main() {
         })
         .unwrap();
     
-    loop {
-        
+    loop {      
         listener.check::<16>(&mut bp_listener).unwrap();
 
     }
