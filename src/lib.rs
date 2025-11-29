@@ -23,6 +23,7 @@ pub(crate) mod cmaps; // Conversion maps
 // All Errors
 //-----------------------------------------------
 pub mod error;
+pub use error::YaoiError;
 
 pub(crate) mod capacity;
 pub mod strategy;
@@ -37,7 +38,7 @@ pub use tcp_pool::tcp_client_pool::TcpClientPool;
 // TcpStream
 //-----------------------------------------------
 mod tcp_stream;
-pub use tcp_stream::TcpStream;
+pub use tcp_stream::{EntConnected, EntHugeTlb, TcpStream};
 
 //-----------------------------------------------
 // TcpListener

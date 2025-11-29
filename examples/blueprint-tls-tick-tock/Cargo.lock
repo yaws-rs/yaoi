@@ -44,6 +44,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
+name = "anonymous-mmap"
+version = "0.1.0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -439,6 +446,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hugepage"
+version = "0.1.0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "inout"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -473,6 +487,17 @@ dependencies = [
  "slab",
  "slabbable",
  "slabbable-impl-selector",
+]
+
+[[package]]
+name = "io-uring-bufring"
+version = "0.1.0"
+dependencies = [
+ "anonymous-mmap",
+ "io-uring",
+ "io-uring-bearer",
+ "io-uring-opcode",
+ "libc",
 ]
 
 [[package]]
@@ -1299,10 +1324,14 @@ dependencies = [
 name = "yaoi"
 version = "0.0.0-scratch0"
 dependencies = [
+ "anonymous-mmap",
  "blueprint",
  "capacity",
  "hashbrown",
+ "hugepage",
+ "io-uring",
  "io-uring-bearer",
+ "io-uring-bufring",
  "io-uring-op-accept-multi",
  "io-uring-op-connect",
  "io-uring-op-socket",
@@ -1323,6 +1352,7 @@ dependencies = [
  "blueprint-tick-tock",
  "blueprint-tls",
  "blueprints-known",
+ "hugepage",
  "yaoi",
 ]
 
