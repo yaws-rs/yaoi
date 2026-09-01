@@ -1,6 +1,6 @@
 //! Yaoi TcpClientPool
 
-use crate::cmaps::{ClientMapMixed, MapConnected, MapSentZc, MapRecvMulti};
+use crate::cmaps::{ClientMapMixed, MapConnected, MapRecvMulti, MapSentZc};
 use crate::error::YaoiError;
 use crate::Blueprints;
 use crate::Dummy;
@@ -222,13 +222,18 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpClientPoo
                             SubmissionRecordStatus::Forget
                         }
                         Completion::RecvMulti(rcv_multi) => {
-			                if entry.result() < 0 {
-	                            panic!("Client / Error - recv_multi: {:?}, e = {:?}, rec = {:?}", rcv_multi, entry, rec);
+                            if entry.result() < 0 {
+                                panic!(
+                                    "Client / Error - recv_multi: {:?}, e = {:?}, rec = {:?}",
+                                    rcv_multi, entry, rec
+                                );
                             }
-			                let buf_len = entry.result() as usize;
+                            let buf_len = entry.result() as usize;
                             let buf_id = match io_uring::cqueue::buffer_select(entry.flags()) {
                                 Some(id) => id,
-                                None => panic!("Client/RecvMulti must have buffer id... but it didn.t"),
+                                None => {
+                                    panic!("Client/RecvMulti must have buffer id... but it didn.t")
+                                }
                             };
 
                             user.bundle
@@ -244,30 +249,33 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpClientPoo
                         Completion::SendZc(sz) => {
                             if entry.result() < 0 {
                                 // TODO: errors
-                                println!("SendZc failed/entry<{:?}> rec<{:?}>", entry, rec);                                
-                            }
-                            else {
+                                println!("SendZc failed/entry<{:?}> rec<{:?}>", entry, rec);
+                            } else {
                                 let buf_ref = match sz.buf_ref() {
                                     Some(buf_ref) => buf_ref,
                                     None => unreachable!(), // TODO: individual errors
                                 };
-                                user.bundle.push(ClientMapMixed::SentZc(
-                                    MapSentZc{ fixed_fd: sz.fixed_fd(),
-                                               sent_out: entry.result() as usize,
-                                               buf_ref: buf_ref }
-                                ));
-                                                                        
+                                user.bundle
+                                    .push(ClientMapMixed::SentZc(MapSentZc {
+                                        fixed_fd: sz.fixed_fd(),
+                                        sent_out: entry.result() as usize,
+                                        buf_ref: buf_ref,
+                                    }))
+                                    .unwrap();
                             }
                             SubmissionRecordStatus::Forget
-                        },
+                        }
                         _ => panic!("Queue had something else than expected? {:?}", rec), // TODO: handle better
                     }
                 })
+                .unwrap();
         };
 
         while let Some(mixed) = user.bundle.pop() {
             match mixed {
-                ClientMapMixed::Nothing => { unreachable!() },
+                ClientMapMixed::Nothing => {
+                    unreachable!()
+                }
                 ClientMapMixed::RecvMulti(mut rcv_multi) => {
                     let slot_u32 = rcv_multi.fixed_fd;
                     let p_entry = match self.pool.get_mut(&slot_u32) {
@@ -284,39 +292,37 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpClientPoo
                         }
 
                         let sm_send = tcp_stream.send_all_out(&mut self.bearer)?;
-//                        if sm_send != 0 {
-                            self.bearer.submit().map_err(YaoiError::Bearer)?;
+                        //                        if sm_send != 0 {
+                        self.bearer.submit().map_err(YaoiError::Bearer)?;
                         //                        }
 
                         tcp_stream.try_free_buffers(&mut self.bearer)?;
-                    }
-                    else {
+                    } else {
                         unreachable!();
                     }
-                },
+                }
                 ClientMapMixed::SentZc(mut sent_zc) => {
                     let slot_u32 = sent_zc.fixed_fd as u32;
-                    
+
                     let p_entry = match self.pool.get_mut(&slot_u32) {
                         Some(p_entry) => p_entry,
                         None => todo!("BUG: {slot_u32} not exist? - pool: {:?}", self.pool),
                     };
-                    
+
                     if let Some(tcp_stream) = p_entry.tcp_stream_mut() {
                         tcp_stream.sent_zc(&mut sent_zc)?;
-                    }
-                    else {
+                    } else {
                         unreachable!();
                     }
-                },
+                }
                 ClientMapMixed::Connected(connected) => {
                     let slot_u32 = connected.fixed_fd as u32;
-                    
+
                     let p_entry = match self.pool.get_mut(&slot_u32) {
                         Some(p_entry) => p_entry,
                         None => todo!("BUG: {slot_u32} not exist? - pool: {:?}", self.pool),
                     };
-                    
+
                     let mut tcp_stream = match connected.result {
                         0 => TcpStream::Connected(EntConnected::from_fixed(connected.fixed_fd)),
                         _ => {
@@ -329,50 +335,53 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpClientPoo
 
                     let mut wants_write = false;
                     let mut wants_read = false;
-                    
+
                     if let Some(tlb_choice) = self.cfg_hugetlb {
-                        let hugetlb_in = HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
-                        let hugetlb_out = HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
+                        let hugetlb_in =
+                            HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
+                        let hugetlb_out =
+                            HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
                         match tcp_stream {
                             TcpStream::Connected(ent_connected) => {
-                                tcp_stream = TcpStream::StreamingHugeTlb(EntHugeTlb::from_connected(
-                                    &mut self.bearer,
-                                    ent_connected,
-                                    hugetlb_in,
-                                    hugetlb_out,
-                                )?);
+                                tcp_stream =
+                                    TcpStream::StreamingHugeTlb(EntHugeTlb::from_connected(
+                                        &mut self.bearer,
+                                        ent_connected,
+                                        hugetlb_in,
+                                        hugetlb_out,
+                                    )?);
                                 wants_write = tcp_stream.left_wants_write();
                                 wants_read = tcp_stream.left_wants_read();
                             }
                             _ => return Err(YaoiError::Bug("Type error. Expected EntConnected?")),
                         }
                     }
-                    
+
                     self.state_connecting -= 1;
                     self.state_connected += 1;
-                    
+
                     match &self.c_fn {
                         Some(f) => f(udata, &mut tcp_stream),
                         None => {}
                     }
-                    
+
                     // TODO: these should not be ? as one of many may fail.
                     let sm_recv = tcp_stream.recv_multi(&mut self.bearer)?;
                     // TODO: these should not be ? as one of many may fail.
                     let sm_send = tcp_stream.send_all_out(&mut self.bearer)?;
-                    
+
                     println!("Client sm_recv<{sm_recv} sm_send<{sm_send}> wants_read/{wants_read} wants_write/{wants_write}");
-            
+
                     *p_entry = match (wants_write, wants_read) {
                         (false, false) => ClientSlotCtx::Connected(tcp_stream),
-                        (false, true) => ClientSlotCtx::Reading(tcp_stream),                
+                        (false, true) => ClientSlotCtx::Reading(tcp_stream),
                         (true, false) => ClientSlotCtx::Writing(tcp_stream),
                         (true, true) => ClientSlotCtx::ReadingAndWriting(tcp_stream),
                     };
-                    
-//                    if sm_recv != 0 || sm_send != 0 {
-                        self.bearer.submit().map_err(YaoiError::Bearer)?;
-//                    }
+
+                    //                    if sm_recv != 0 || sm_send != 0 {
+                    self.bearer.submit().map_err(YaoiError::Bearer)?;
+                    //                    }
                 }
             }
         }

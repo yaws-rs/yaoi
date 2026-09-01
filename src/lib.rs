@@ -1,12 +1,15 @@
 #![warn(
     clippy::unwrap_used,
-    missing_docs,
+    //missing_docs,
     rust_2018_idioms,
     unused_lifetimes,
     unused_qualifications
 )]
 #![doc = include_str!("../README.md")]
 #![allow(unused_imports)]
+#![allow(dead_code)]
+#![allow(unreachable_code)]
+#![allow(unused)]
 
 //-----------------------------------------------
 // Internal Macros

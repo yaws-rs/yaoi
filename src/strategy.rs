@@ -58,17 +58,26 @@ impl NeedRegisterStrategy {
     /// All Accepted sockets are registered with regular filehandles that are not mapped fixed into io_uring.
     pub fn regular_fds(&self) -> NeedCapBounded {
         match self {
-            Self::Replenish(c) => NeedCapBounded(StrategyListener::Replenish(*c, StrategyRegister::Regular, 0)),
+            Self::Replenish(c) => NeedCapBounded(StrategyListener::Replenish(
+                *c,
+                StrategyRegister::Regular,
+                0,
+            )),
             Self::Multi => NeedCapBounded(StrategyListener::Multi(StrategyRegister::Regular, 0)),
         }
     }
     /// All Accepted sockets are registered as fixed filehandles that are mapped directly in io_uring.
     pub fn fixed_fds(&self, fixed_fd_capacity: u32) -> StrategyListener {
         match self {
-            Self::Replenish(c) => {
-                StrategyListener::Replenish(*c, StrategyRegister::Fixed(fixed_fd_capacity), fixed_fd_capacity)
-            }
-            Self::Multi => StrategyListener::Multi(StrategyRegister::Fixed(fixed_fd_capacity), fixed_fd_capacity),
+            Self::Replenish(c) => StrategyListener::Replenish(
+                *c,
+                StrategyRegister::Fixed(fixed_fd_capacity),
+                fixed_fd_capacity,
+            ),
+            Self::Multi => StrategyListener::Multi(
+                StrategyRegister::Fixed(fixed_fd_capacity),
+                fixed_fd_capacity,
+            ),
         }
     }
 }
@@ -79,7 +88,9 @@ impl NeedCapBounded {
     /// In case of Regular Fds we need to supply the bounded capacity (concurent connections) for the listener pool
     pub fn pool_capacity(mut self, pool_cap: u32) -> StrategyListener {
         match self.0 {
-            StrategyListener::Replenish(replenish_c, strat_reg, _) => StrategyListener::Replenish(replenish_c, strat_reg, pool_cap),
+            StrategyListener::Replenish(replenish_c, strat_reg, _) => {
+                StrategyListener::Replenish(replenish_c, strat_reg, pool_cap)
+            }
             StrategyListener::Multi(strat_reg, _) => StrategyListener::Multi(strat_reg, pool_cap),
         }
     }

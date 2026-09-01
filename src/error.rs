@@ -16,7 +16,7 @@ pub enum YaoiError {
     /// UringBearer errors
     Bearer(UringBearerError),
     /// UringBearer errors
-    Bearer2(UringBearerError),    
+    Bearer2(UringBearerError),
     /// Misc Yaoi Bug that should cause a controlled panic downstream.
     /// This should be reported.
     Bug(&'static str),
@@ -42,14 +42,20 @@ impl Display for YaoiError {
         match self {
             Self::StdIo(e) => write!(f, "StdIo: {}", e),
             Self::Bearer(e) => write!(f, "UringBearer: {}", e),
-            Self::Bearer2(e) => write!(f, "UringBearer: {}", e),            
+            Self::Bearer2(e) => write!(f, "UringBearer: {}", e),
             Self::Bug(e) => write!(f, "Yaoi Bug: {}", e),
             Self::IoUring(e) => write!(f, "Yaoi IoUring: {}", e),
             Self::HugeTlbAlreadySet => write!(f, "HugeTLB already set once."),
             Self::HugeTlb(e) => write!(f, "HugeTlb error: {}", e),
             Self::BpNeedBuffers => write!(f, "Need buffers to run blueprints."),
-            Self::LimitHugeTlbU16 => write!(f, "Streaming incremental HugeTLB buffers can be created only on u16 TcpSteam Ids."),
-            Self::HugeTlbReqFixedId => write!(f, "Streaming incremental HugeTLB buffers can be only created on fixed id TcpStreams."),
+            Self::LimitHugeTlbU16 => write!(
+                f,
+                "Streaming incremental HugeTLB buffers can be created only on u16 TcpSteam Ids."
+            ),
+            Self::HugeTlbReqFixedId => write!(
+                f,
+                "Streaming incremental HugeTLB buffers can be only created on fixed id TcpStreams."
+            ),
             Self::RingBuf(re) => write!(f, "RingBuf: {}", re),
         }
     }

@@ -2,28 +2,28 @@
 
 use crate::error::YaoiError;
 use crate::strategy::StrategyListener;
-use crate::TcpStream;
 use crate::EntHugeTlb;
-use core::net::SocketAddr;
+use crate::TcpStream;
 use core::marker::PhantomData;
+use core::net::SocketAddr;
 
 use ysockaddr::YSockAddrC;
 
 use io_uring_bearer::completion::SubmissionRecordStatus;
 use io_uring_bearer::Completion;
-use io_uring_bearer::TargetFd;
 use io_uring_bearer::SubmissionFlags;
+use io_uring_bearer::TargetFd;
 use io_uring_bearer::UringBearer;
 use io_uring_opcode::{OpCode, OpCompletion};
 use io_uring_opcode_sets::Wrapper;
 
-use crate::cmaps::{ServerMapMixed, MapAccepted, MapRecvMulti, MapSentZc};
+use crate::cmaps::{MapAccepted, MapRecvMulti, MapSentZc, ServerMapMixed};
 use crate::EntConnected;
 
 use std::ffi::c_int;
 
-use thingbuf::StaticThingBuf;
 use hugepage::HugePageBytes;
+use thingbuf::StaticThingBuf;
 
 use hashbrown::HashMap;
 use nohash_hasher::BuildNoHashHasher;
@@ -59,7 +59,6 @@ impl ListenerSlotCtx {
         Some(s)
     }
 }
-    
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 pub(crate) unsafe fn setsockopt<T>(
@@ -89,7 +88,7 @@ pub struct TcpListener<Cfun, Cdata> {
 
     pool: HashMap<u32, ListenerSlotCtx, BuildNoHashHasher<u32>>,
     pool_count: usize,
-    
+
     a_fn: Option<Cfun>,
     cfg_hugetlb: Option<hugepage::HugePageChoice>,
     cd: PhantomData<Cdata>,
@@ -141,13 +140,11 @@ fn accept_replenish_cc(
     for x in 0..repl_cc {
         match addr {
             // SAFETY: We can only have IPv4 Listener through type
-            SocketAddr::V4(_) => {
-                unsafe { bearer.add_accept_ipv4(reg_mapped_acceptfd, target_fd) }.map_err(YaoiError::Bearer)?
-            }
+            SocketAddr::V4(_) => unsafe { bearer.add_accept_ipv4(reg_mapped_acceptfd, target_fd) }
+                .map_err(YaoiError::Bearer)?,
             // SAFETY: We can only have IPv6 Listener through type
-            SocketAddr::V6(_) => {
-                unsafe { bearer.add_accept_ipv6(reg_mapped_acceptfd, target_fd) }.map_err(YaoiError::Bearer)?
-            }
+            SocketAddr::V6(_) => unsafe { bearer.add_accept_ipv6(reg_mapped_acceptfd, target_fd) }
+                .map_err(YaoiError::Bearer)?,
         }
     }
     bearer.submit().map_err(YaoiError::Bearer)?;
@@ -205,7 +202,7 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                 strategy.cap_pool() as usize,
                 BuildNoHashHasher::default(),
             );
-        
+
         Ok(TcpListener {
             local_addr: addr,
             bearer,
@@ -228,7 +225,6 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
     /// Check for max N events
     #[inline]
     pub fn check<const N: usize>(&mut self, udata: &mut Cdata) -> Result<(), YaoiError> {
-
         #[derive(Debug)]
         struct UserData<const N: usize> {
             e: u32,
@@ -240,7 +236,6 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
             bundle: StaticThingBuf::<ServerMapMixed, N>::new(),
         };
 
-        
         // SAFETY: Assuming we are doing single-shot Accept. This will not be safe with multi-shot (TODO).
         unsafe {
             self.bearer
@@ -250,52 +245,59 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                             u.bundle
                                 .push(ServerMapMixed::Accepted(MapAccepted {
                                     s_addr: a_rec.sockaddr(),
-			                        result: e.result(),
+                                    result: e.result(),
                                 }))
                                 .unwrap();
                             u.e += 1;
                             SubmissionRecordStatus::Forget
-                        },
+                        }
                         Completion::SendZc(sz) => {
                             if e.result() < 0 {
                                 // TODO: errors
                                 println!("Listener/SendZc failed/entry<{:?}> rec<{:?}>", e, rec);
-                            }
-                            else {
+                            } else {
                                 let buf_ref = match sz.buf_ref() {
                                     Some(buf_ref) => buf_ref,
                                     None => unreachable!(), // TODO: individual errors
-	                            };
-                                u.bundle.push(ServerMapMixed::SentZc(
-                                    MapSentZc{ fixed_fd: sz.fixed_fd(),
-                                               sent_out: e.result() as usize,
-                                               buf_ref: buf_ref }
-                                ));
-
+                                };
+                                u.bundle
+                                    .push(ServerMapMixed::SentZc(MapSentZc {
+                                        fixed_fd: sz.fixed_fd(),
+                                        sent_out: e.result() as usize,
+                                        buf_ref: buf_ref,
+                                    }))
+                                    .unwrap();
                             }
                             match io_uring::cqueue::more(e.flags()) {
                                 false => SubmissionRecordStatus::Forget,
                                 true => SubmissionRecordStatus::Retain,
                             }
-                        },
+                        }
                         Completion::RecvMulti(rcv_multi) => {
                             if e.result() < 0 {
-                                panic!("Server / Error - recv_multi: {:?}, e = {:?}, rec = {:?}", rcv_multi, e, rec);
+                                panic!(
+                                    "Server / Error - recv_multi: {:?}, e = {:?}, rec = {:?}",
+                                    rcv_multi, e, rec
+                                );
                             }
 
                             if !io_uring::cqueue::more(e.flags()) {
                                 println!("RecvMulti No-More triggered.");
                                 // KTODO no more recv
                                 SubmissionRecordStatus::Forget
-                            }
-                            else {
-                                println!("RecvMulti = {:?}, e = {:?}, rec = {:?}", rcv_multi, e, rec);
+                            } else {
+                                println!(
+                                    "RecvMulti = {:?}, e = {:?}, rec = {:?}",
+                                    rcv_multi, e, rec
+                                );
                                 let buf_len = e.result() as usize;
                                 let buf_id = match io_uring::cqueue::buffer_select(e.flags()) {
                                     Some(id) => id,
-                                    None => panic!("RecvMulti must have buffer id... but it didn.t"),
+                                    None => {
+                                        panic!("RecvMulti must have buffer id... but it didn.t")
+                                    }
                                 };
-                                
+
                                 u.bundle
                                     .push(ServerMapMixed::RecvMulti(MapRecvMulti {
                                         fixed_fd: rcv_multi.fixed_fd(),
@@ -306,9 +308,12 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                                     .unwrap();
                                 SubmissionRecordStatus::Retain
                             }
-                        },
-                        // TODO: Bugs should not happen but we should provide surface for exposing it.                        
-                        _ => panic!("Server - Missing handle_completion for e = {:?}, rec = {:?}", e, rec),
+                        }
+                        // TODO: Bugs should not happen but we should provide surface for exposing it.
+                        _ => panic!(
+                            "Server - Missing handle_completion for e = {:?}, rec = {:?}",
+                            e, rec
+                        ),
                     }
                 })
                 .map_err(YaoiError::Bearer)?
@@ -318,7 +323,7 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
             match mixed {
                 ServerMapMixed::Nothing => {
                     unreachable!()
-                },
+                }
                 ServerMapMixed::SentZc(mut sent_zc) => {
                     let slot_u32 = sent_zc.fixed_fd as u32;
 
@@ -329,14 +334,13 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
 
                     if let Some(tcp_stream) = p_entry.tcp_stream_mut() {
                         tcp_stream.sent_zc(&mut sent_zc)?;
-                    }
-                    else {
+                    } else {
                         unreachable!();
-                    }                    
-                },
+                    }
+                }
                 ServerMapMixed::RecvMulti(mut rcv_multi) => {
                     let slot_u32 = rcv_multi.fixed_fd;
-                    
+
                     let p_entry = match self.pool.get_mut(&slot_u32) {
                         Some(p_entry) => p_entry,
                         None => todo!("BUG: {slot_u32} not exist? - pool: {:?}", self.pool),
@@ -354,17 +358,15 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                             let sm_send = tcp_stream.send_all_out(&mut self.bearer)?;
                             if sm_send != 0 {
                                 self.bearer.submit().map_err(YaoiError::Bearer)?;
-                            }
-                            else {
+                            } else {
                                 break;
                             }
                         }
                         tcp_stream.try_free_buffers(&mut self.bearer)?;
-                    }
-                    else {
+                    } else {
                         unreachable!();
-                    }                    
-                },
+                    }
+                }
                 ServerMapMixed::Accepted(accepted) => {
                     println!("Accepted = {:?}", accepted);
                     let s_addr = accepted.s_addr;
@@ -374,30 +376,35 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                             // TODO: signal errors through closure
                             // TODO: replenish Accept
                             continue;
-                        },
+                        }
                     };
-                    
+
                     // TODO: regular fd's
                     let mut tcp_stream = match s_addr {
-                        Some(s_addr) => TcpStream::Connected(EntConnected::from_fixed(slot_u32).and_peer_addr(s_addr)),
+                        Some(s_addr) => TcpStream::Connected(
+                            EntConnected::from_fixed(slot_u32).and_peer_addr(s_addr),
+                        ),
                         None => TcpStream::Connected(EntConnected::from_fixed(slot_u32)),
                     };
-                    
+
                     let mut wants_write = false;
                     let mut wants_read = false;
-                    
+
                     if let Some(tlb_choice) = self.cfg_hugetlb {
-                        let hugetlb_in = HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
-                        let hugetlb_out = HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
+                        let hugetlb_in =
+                            HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
+                        let hugetlb_out =
+                            HugePageBytes::new(tlb_choice).map_err(YaoiError::HugeTlb)?;
                         match tcp_stream {
                             TcpStream::Connected(ent_connected) => {
                                 // TODO error in one of many
-                                tcp_stream = TcpStream::StreamingHugeTlb(EntHugeTlb::from_connected(
-                                    &mut self.bearer,
-                                    ent_connected,
-                                    hugetlb_in,
-                                    hugetlb_out,
-                                )?);
+                                tcp_stream =
+                                    TcpStream::StreamingHugeTlb(EntHugeTlb::from_connected(
+                                        &mut self.bearer,
+                                        ent_connected,
+                                        hugetlb_in,
+                                        hugetlb_out,
+                                    )?);
                                 wants_write = tcp_stream.left_wants_write();
                                 wants_read = tcp_stream.left_wants_read();
                             }
@@ -408,28 +415,28 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                         Some(f) => f(udata, &mut tcp_stream),
                         None => {}
                     }
-                    
+
                     let sm_recv = tcp_stream.recv_multi(&mut self.bearer)?;
                     let sm_send = tcp_stream.send_all_out(&mut self.bearer)?;
-                    
+
                     let slot = match (wants_write, wants_read) {
                         (false, false) => ListenerSlotCtx::Accepted(tcp_stream),
                         (false, true) => ListenerSlotCtx::Reading(tcp_stream),
                         (true, false) => ListenerSlotCtx::Writing(tcp_stream),
                         (true, true) => ListenerSlotCtx::ReadingAndWriting(tcp_stream),
                     };
-                    
+
                     // TODO: existing (errored? occupied!?) slot
                     println!("self.pool.insert({})", slot_u32);
                     self.pool.insert(slot_u32, slot);
-                    
+
                     if sm_recv != 0 || sm_send != 0 {
                         self.bearer.submit().map_err(YaoiError::Bearer)?;
                     }
                 }
             }
         }
-        
+
         Ok(())
     }
     /// Set HugeTLB as buffers backend with the given choice of hugetlb size.
@@ -441,7 +448,7 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
             }
             _ => Err(YaoiError::HugeTlbAlreadySet),
         }
-	}    
+    }
     /// Listener local address
     pub fn local_addr(&self) -> SocketAddr {
         self.local_addr
