@@ -13,7 +13,7 @@ use std::os::fd::RawFd;
 
 use hugepage::HugePageBytes;
 
-use crate::cmaps::{MapSentZc, MapRecvMulti};
+use crate::cmaps::{MapRecvMulti, MapSentZc};
 use crate::Blueprints;
 use crate::YaoiError;
 use blueprint::Orbit;
@@ -49,9 +49,9 @@ fn _require_fixed_fd(try_some: Option<u32>) -> Result<u32, YaoiError> {
 impl TcpStream {
     /// Run blueprints end-to-end Left to Right and back
     #[inline]
-    pub fn run_blueprints<const Layers: usize, O: Orbit>(
+    pub fn run_blueprints<const LAYERS: usize, O: Orbit>(
         &mut self,
-        bp: &mut Blueprints<Layers, O>,
+        bp: &mut Blueprints<LAYERS, O>,
     ) -> Result<(), YaoiError> {
         match self {
             Self::Connected(_) => Err(YaoiError::BpNeedBuffers),
@@ -88,9 +88,9 @@ impl TcpStream {
             Self::Connected(_) => Err(YaoiError::BpNeedBuffers),
             Self::StreamingHugeTlb(ref mut huge_tlb) => {
                 let fixed_fd = _require_fixed_fd(maybe_fixed_fd)?;
-                let slot_u16 =_slot_u16_from_fixed_fd(maybe_fixed_fd)?;
+                let slot_u16 = _slot_u16_from_fixed_fd(maybe_fixed_fd)?;
                 huge_tlb.recv_multi(fixed_fd, slot_u16, bearer)
-            },
+            }
         }
     }
     // Attemp to reuse / free any unused buffers
@@ -98,9 +98,7 @@ impl TcpStream {
     pub fn try_free_buffers(&mut self, bearer: &mut UringBearer<Wrapper>) -> Result<(), YaoiError> {
         match self {
             Self::Connected(_) => Err(YaoiError::BpNeedBuffers),
-            Self::StreamingHugeTlb(ref mut huge_tlb) => {
-                huge_tlb.try_free_buffers(bearer)
-            }
+            Self::StreamingHugeTlb(ref mut huge_tlb) => huge_tlb.try_free_buffers(bearer),
         }
     }
     /// Issue Send for all the pending data to be sent out
@@ -113,7 +111,7 @@ impl TcpStream {
             Self::StreamingHugeTlb(ref mut huge_tlb) => {
                 let fixed_fd = _require_fixed_fd(maybe_fixed_fd)?;
                 huge_tlb.send_all_out(fixed_fd, bearer)
-            },
+            }
         }
     }
     /// Called for each successfull SentZc completion
@@ -123,9 +121,9 @@ impl TcpStream {
         match self {
             Self::Connected(_) => Err(YaoiError::BpNeedBuffers),
             Self::StreamingHugeTlb(ref mut huge_tlb) => {
-                let fixed_fd = _require_fixed_fd(maybe_fixed_fd)?;                
+                let fixed_fd = _require_fixed_fd(maybe_fixed_fd)?;
                 huge_tlb.sent_zc(fixed_fd, sent_zc)
-            },
+            }
         }
     }
     #[inline]
@@ -134,9 +132,9 @@ impl TcpStream {
         match self {
             Self::Connected(_) => Err(YaoiError::BpNeedBuffers),
             Self::StreamingHugeTlb(ref mut huge_tlb) => {
-                let fixed_fd = _require_fixed_fd(maybe_fixed_fd)?;                
+                let fixed_fd = _require_fixed_fd(maybe_fixed_fd)?;
                 huge_tlb.cb_recv_multi(fixed_fd, recv_multi)
-            },
-        }        
+            }
+        }
     }
 }

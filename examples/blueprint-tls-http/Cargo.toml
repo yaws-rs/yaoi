@@ -11,9 +11,15 @@ repository = "https://github.com/yaws-rs/blueprint"
 categories = ["science"]
 
 [dependencies]
-blueprint = { path = "../../../blueprint", version = "0.0.1", default-features = false }
-blueprints-known = { path = "../../../blueprint/known", version = "0.0.1", default-features = false, features = ["tls", "h11server"] }
-blueprint-tls = { path = "../../../tls/blueprint", version = "0.0.1", default-features = false, features = ["std", "util"] }
+blueprint = { path = "../../../blueprint", version = "0.1.0", default-features = false }
+blueprints-known = { path = "../../../blueprint/known", version = "0.1.0", default-features = false, features = ["ytls-server", "h11server", "rustls"] }
+blueprint-ytls = { path = "../../../tls/ytls-blueprint", version = "0.0.1", default-features = false, features = ["server", "zeroize"] }
+blueprint-rustls = { path = "../../../tls/rustls-blueprint", version = "0.0.1", default-features = false, features = ["std", "util"] }
+#ytls-rustcrypto = { version = "0.0.2" }
+rand = { version = "=0.10.0-rc.5", default-features = false, features = ["thread_rng"] }
+pem-rfc7468 = { version = "1", default-features = false, features = ["alloc"] }
+sec1 = { version = "=0.8.0-rc.10", default-features = false }
+
 blueprint-h11spec = { path = "../../../h11spec/blueprint", default-features = false, features = ["h11server"] }
 yaoi = { path = "../../", version = "0.0.0-scratch0", default-features = false }
 hugepage = { path = "../../../ylibc/hugepage", version = "0.1.0", default-features = false }

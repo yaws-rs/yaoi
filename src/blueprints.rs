@@ -3,36 +3,36 @@
 use blueprint::Orbit;
 
 #[derive(Clone, Debug)]
-pub struct Blueprints<const Layers: usize, O: Orbit> {
-    layers: [O; Layers],
+pub struct Blueprints<const LAYERS: usize, O: Orbit> {
+    layers: [O; LAYERS],
     app: O,
 }
 
-impl<const Layers: usize, O: Orbit> Blueprints<Layers, O> {
-    /// Borrow the intermediate Layers as mutable
-    pub fn layers_as_mut(&mut self) -> &mut [O; Layers] {
+impl<const LAYERS: usize, O: Orbit> Blueprints<LAYERS, O> {
+    /// Borrow the intermediate LAYERS as mutable
+    pub fn layers_as_mut(&mut self) -> &mut [O; LAYERS] {
         &mut self.layers
     }
     /// Borrow the terminating App layer as mutable
     pub fn app_as_mut(&mut self) -> &mut O {
         &mut self.app
     }
-    /// Count of all Layers +1 App
+    /// Count of all LAYERS +1 App
     pub fn count_all_layers(&self) -> usize {
         self.layers.len() + 1
     }
     /// Iterate mutable non-App layers
-    pub fn layers_iter_mut<'a>(&'a mut self) -> impl Iterator + use<'a, Layers, O> {
+    pub fn layers_iter_mut<'a>(&'a mut self) -> impl Iterator + use<'a, LAYERS, O> {
         self.layers.iter_mut()
     }
 }
 
 /// Blueprints needs Layers constructor
-pub struct BlueprintsLayers<const Layers: usize>;
+pub struct BlueprintsLayers<const LAYERS: usize>;
 
-impl<const Layers: usize> BlueprintsLayers<Layers> {
+impl<const LAYERS: usize> BlueprintsLayers<LAYERS> {
     /// Set the intermediate layers
-    pub fn layers<O: Orbit>(orbits: [O; Layers]) -> BlueprintsNeedApp<Layers, O> {
+    pub fn layers<O: Orbit>(orbits: [O; LAYERS]) -> BlueprintsNeedApp<LAYERS, O> {
         BlueprintsNeedApp { layers: orbits }
     }
     /// No intermediate layers involved
@@ -42,14 +42,14 @@ impl<const Layers: usize> BlueprintsLayers<Layers> {
 }
 
 /// Blueprints needs App constructor
-pub struct BlueprintsNeedApp<const Layers: usize, O: Orbit> {
-    layers: [O; Layers],
+pub struct BlueprintsNeedApp<const LAYERS: usize, O: Orbit> {
+    layers: [O; LAYERS],
 }
 
-impl<const Layers: usize, O: Orbit> BlueprintsNeedApp<Layers, O> {
+impl<const LAYERS: usize, O: Orbit> BlueprintsNeedApp<LAYERS, O> {
     /// Set the terminating App or final layer
-    pub fn app(self, app: O) -> Blueprints<Layers, O> {
-        Blueprints::<Layers, _> {
+    pub fn app(self, app: O) -> Blueprints<LAYERS, O> {
+        Blueprints::<LAYERS, _> {
             layers: self.layers,
             app,
         }

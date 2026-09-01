@@ -11,7 +11,7 @@ repository = "https://github.com/yaws-rs/yaoi"
 categories = ["science"]
 
 [dependencies]
-blueprint = { path = "../blueprint", version = "0.0.1", default-features = false }
+blueprint = { path = "../blueprint", version = "0.1.0", default-features = false }
 capacity = "0.1"
 hashbrown = "0.15.2"
 hugepage = { path = "../ylibc/hugepage", version = "0.1.0", default-features = false }
