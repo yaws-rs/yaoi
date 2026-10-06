@@ -43,6 +43,8 @@ struct CursorLeft {
     pos_out_start: usize,
     pos_out_end: usize,
     idx_out_cur: u16,
+    pending_sends: usize,
+    pending_bufs: usize,
 }
 
 impl EntHugeTlb {
@@ -116,6 +118,22 @@ impl EntHugeTlb {
 
         println!("send_all_out = {}", total_out_len);
 
+        if self.cursor.pending_sends > 8192 {
+            println!(
+                "don't send - too many Sends pending: {}",
+                self.cursor.pending_sends
+            );
+            return Ok(0);
+        }
+
+        if self.cursor.pending_bufs > 5 {
+            println!(
+                "don't send - too many Bufs pending: {}",
+                self.cursor.pending_sends
+            );
+            return Ok(0);
+        }
+
         if total_out_len == 0 {
             return Ok(0);
         }
@@ -160,6 +178,9 @@ impl EntHugeTlb {
             }
             // TODO: what if it's only one chunk failing? granular error handling
             .map_err(YaoiError::Bearer)?;
+
+            self.cursor.pending_sends += chunk_len;
+            self.cursor.pending_bufs += 1;
 
             if buf_id == 255 {
                 self.cursor.idx_out_cur = 0;
@@ -227,6 +248,19 @@ impl EntHugeTlb {
         sent_zc: &mut MapSentZc,
     ) -> Result<(), YaoiError> {
         // do nothing given we marked it sent pre-completion
+
+        println!("sent_zc = {:?}", sent_zc);
+
+        //panic!("sentzc = {:?}", sent_zc);
+
+        self.cursor.pending_sends -= sent_zc.sent_out;
+        println!("-- Pending sends: {}", self.cursor.pending_sends);
+
+        if sent_zc.more == false {
+            self.cursor.pending_bufs -= 1;
+        }
+        println!("-- Pending bufs: {}", self.cursor.pending_bufs);
+
         Ok(())
     }
     pub(crate) fn cb_recv_multi(

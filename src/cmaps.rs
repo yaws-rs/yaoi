@@ -25,6 +25,7 @@ pub(crate) struct MapSentZc {
     pub(crate) fixed_fd: u32,
     pub(crate) sent_out: usize,
     pub(crate) buf_ref: usize,
+    pub(crate) more: bool,
 }
 
 #[derive(Clone, Debug, Default)]
