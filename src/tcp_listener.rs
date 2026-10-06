@@ -260,11 +260,15 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                                     Some(buf_ref) => buf_ref,
                                     None => unreachable!(), // TODO: individual errors
                                 };
+
+                                let more = io_uring::cqueue::more(e.flags());
+
                                 u.bundle
                                     .push(ServerMapMixed::SentZc(MapSentZc {
                                         fixed_fd: sz.fixed_fd(),
                                         sent_out: e.result() as usize,
                                         buf_ref: buf_ref,
+                                        more,
                                     }))
                                     .unwrap();
                             }
@@ -334,6 +338,21 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
 
                     if let Some(tcp_stream) = p_entry.tcp_stream_mut() {
                         tcp_stream.sent_zc(&mut sent_zc)?;
+
+                        loop {
+                            match &self.a_fn {
+                                Some(f) => f(udata, tcp_stream),
+                                None => {}
+                            }
+
+                            let sm_send = tcp_stream.send_all_out(&mut self.bearer)?;
+                            if sm_send != 0 {
+                                self.bearer.submit().map_err(YaoiError::Bearer)?;
+                            } else {
+                                break;
+                            }
+                        }
+                        tcp_stream.try_free_buffers(&mut self.bearer)?;
                     } else {
                         unreachable!();
                     }

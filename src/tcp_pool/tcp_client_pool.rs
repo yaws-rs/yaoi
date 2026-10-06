@@ -255,11 +255,13 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpClientPoo
                                     Some(buf_ref) => buf_ref,
                                     None => unreachable!(), // TODO: individual errors
                                 };
+                                let more = io_uring::cqueue::more(entry.flags());
                                 user.bundle
                                     .push(ClientMapMixed::SentZc(MapSentZc {
                                         fixed_fd: sz.fixed_fd(),
                                         sent_out: entry.result() as usize,
                                         buf_ref: buf_ref,
+                                        more,
                                     }))
                                     .unwrap();
                             }
