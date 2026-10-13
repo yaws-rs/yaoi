@@ -390,7 +390,7 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                     println!("Accepted = {:?}", accepted);
                     let s_addr = accepted.s_addr;
                     let slot_u32 = match accepted.result {
-                        0..i32::MAX => accepted.result as u32,
+                        0_i32..=i32::MAX => accepted.result as u32,
                         _ => {
                             // TODO: signal errors through closure
                             // TODO: replenish Accept

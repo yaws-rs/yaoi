@@ -1,8 +1,6 @@
 //! yTLS Orbit initialization
 
-use blueprint::Orbit;
 use blueprint_ytls::{Alpn, TlsServerCtxConfig, TlsServerOrbit};
-use blueprint_ytls::{CryptoConfig, CryptoRng};
 
 use super::{CA, CERT, KEY};
 
@@ -63,8 +61,8 @@ impl Default for TlsServerConfig {
     }
 }
 
-use ytls_rustcrypto::RustCrypto;
 use rand::rngs::ThreadRng;
+use ytls_rustcrypto::RustCrypto;
 
 pub fn init_ytls_server() -> TlsServerOrbit<TlsServerConfig, RustCrypto, ThreadRng> {
     let crypto = ytls_rustcrypto::RustCrypto;
@@ -74,10 +72,9 @@ pub fn init_ytls_server() -> TlsServerOrbit<TlsServerConfig, RustCrypto, ThreadR
 }
 
 fn load_pem_vec(path: &str) -> Vec<u8> {
-    use std::io::{Read};
+    use std::io::Read;
     let mut f = std::fs::File::open(path).unwrap();
     let mut data: Vec<u8> = vec![];
     f.read_to_end(&mut data).unwrap();
     data
 }
-

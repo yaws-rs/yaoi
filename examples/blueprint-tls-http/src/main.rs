@@ -1,23 +1,17 @@
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use yaoi::strategy::StrategyListener;
-use yaoi::{Blueprints, BlueprintsLayers};
-use yaoi::TcpClientPool;
 use yaoi::TcpListener;
-
-use std::thread::sleep;
-use std::time::Duration;
+use yaoi::{Blueprints, BlueprintsLayers};
 
 use blueprint::BluePrint;
-use blueprint::Orbit;
 use blueprint_h11spec::H11SpecServer;
 use blueprints_known::Orbits;
 
-use blueprint_rustls::{TlsServer as RustlsServer, TlsServerConfig as RustlsServerConfig};
+//use blueprint_rustls::{TlsServer as RustlsServer, TlsServerConfig as RustlsServerConfig};
+//use std::path::Path;
 
-struct ConnectInfo;
-struct AcceptInfo;
-
-use std::path::Path;
+mod rick_roll;
+mod ytls;
 
 //const CA: &'static str = "../../../tls/test_certs/ca.rsa4096.crt";
 //const CA: &'static str = "../../../tls/test_certs/ca.ed25519.crt";
@@ -37,21 +31,16 @@ fn clear_server_blueprints() -> Blueprints<0, Orbits> {
         .app(Orbits::H11Server(H11SpecServer::with_defaults().unwrap()))
 } */
 
-mod ytls;
-
-use blueprint_ytls::{CryptoConfig, CryptoRng};
-use ytls::TlsServerConfig;
 use rand::rngs::ThreadRng;
+use rick_roll::RickRoll;
+use ytls::TlsServerConfig;
 use ytls_rustcrypto::RustCrypto;
 
-fn ytls_server_blueprints() -> Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng>> {
-
-    BlueprintsLayers::<1>::layers([
-        Orbits::YtlsServer(ytls::init_ytls_server())
-    ])
+fn ytls_server_blueprints(
+) -> Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng, RickRoll>> {
+    BlueprintsLayers::<1>::layers([Orbits::YtlsServer(ytls::init_ytls_server())])
         .app(Orbits::H11Server(H11SpecServer::with_defaults().unwrap()))
 }
-
 
 /*
 fn rustls_server_blueprints() -> Blueprints<1, Orbits<_, _, _>> {
@@ -65,32 +54,32 @@ fn rustls_server_blueprints() -> Blueprints<1, Orbits<_, _, _>> {
         .app(Orbits::H11Server(H11SpecServer::with_defaults().unwrap()))
 } */
 
-
 fn main() {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 64, 3)), 8181);
 
     let listener_strategy = StrategyListener::replenishing(3).fixed_fds(3);
 
     let mut listener = TcpListener::listen_with_strategy(addr, 256, listener_strategy).unwrap();
-    listener.set_hugetlb(hugepage::HugePageChoice::HUGE_2MB).unwrap();
-    
-//    let mut bp_listener: [Blueprints::<1, Orbits>; 2] = core::array::from_fn(|_| ytls_server_blueprints());
-    let mut bp_listener: [Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng>>; 2]
-    = core::array::from_fn(|_| ytls_server_blueprints());    
-//    let mut bp_listener: [Blueprints::<1, Orbits>; 2] = core::array::from_fn(|_| rustls_server_blueprints());    
-//    let mut bp_listener: [Blueprints::<0, Orbits>; 2] = core::array::from_fn(|_| clear_server_blueprints());    
+    listener
+        .set_hugetlb(hugepage::HugePageChoice::HUGE_2MB)
+        .unwrap();
+
+    //    let mut bp_listener: [Blueprints::<1, Orbits>; 2] = core::array::from_fn(|_| ytls_server_blueprints());
+    let mut bp_listener: [Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng, RickRoll>>;
+        2] = core::array::from_fn(|_| ytls_server_blueprints());
+    //    let mut bp_listener: [Blueprints::<1, Orbits>; 2] = core::array::from_fn(|_| rustls_server_blueprints());
+    //    let mut bp_listener: [Blueprints::<0, Orbits>; 2] = core::array::from_fn(|_| clear_server_blueprints());
 
     // Setup Listener behaviour on_accept
     listener
         .accept_with_cb(&mut bp_listener, |ud, stream| {
             let id = stream.fixed_fd().unwrap() as usize;
 
-            stream.run_blueprints(&mut ud[id-1]).unwrap();
+            stream.run_blueprints(&mut ud[id - 1]).unwrap();
         })
         .unwrap();
-    
-    loop {      
-        listener.check::<16>(&mut bp_listener).unwrap();
 
+    loop {
+        listener.check::<16>(&mut bp_listener).unwrap();
     }
 }
