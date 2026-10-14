@@ -15,6 +15,7 @@ const RICK_ROLL: &[u8] = core::include_bytes!("/tmp/rick-roll.gif");
 pub struct RickRoll {
     payload_out_cursor: PayloadCursor,
     headers: [H11Header<'static>; 1],
+    method: Option<H11Method>,
 }
 
 /// Stateful cursor for sending / receiving bytes
@@ -30,38 +31,32 @@ impl Default for RickRoll {
             headers: [H11Header::ContentLength(H11MaybeValue::Integer(
                 "193274".as_bytes(),
             ))],
+            method: None,
         }
     }
 }
 
 impl RequestReceiver for RickRoll {
     /// Provides request method
-    fn req_method(&mut self, mthd: H11Method) -> () {
-        println!("Got Method: {:?}", mthd);
-        ()
+    fn req_method(&mut self, mthd: H11Method) {
+        self.method = Some(mthd);
     }
     /// Provide target receiver
     fn impl_target(&mut self) -> impl RequestTargetReceiver {
         self
     }
     /// Provides request version
-    fn req_version(&mut self, version: H11Version) -> () {
-        println!("Got Version: {:?}", version);
-        ()
-    }
+    fn req_version(&mut self, _version: H11Version) {}
     /// Indicates start of headers processing and completion of request line
     fn req_start_headers(&mut self) -> RespIndicative {
-        println!("Got req_start_headers");
         RespIndicative::GoAhead
     }
     /// Indicates start of payload processing and completion of headers
     fn req_start_payload(&mut self) -> RespIndicative {
-        println!("Got req_start_payload");
         RespIndicative::GoAhead
     }
     /// Indicates completion of entire request
     fn req_complete(&mut self) -> RespIndicative {
-        println!("Got req_complete");
         RespIndicative::GoAhead
     }
 }

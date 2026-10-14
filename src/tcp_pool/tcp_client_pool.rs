@@ -236,12 +236,16 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpClientPoo
                                 }
                             };
 
+                            // KTODO shutdown - more flag should be false
+                            let mut shutdown = false;
+                            
                             user.bundle
                                 .push(ClientMapMixed::RecvMulti(MapRecvMulti {
                                     fixed_fd: rcv_multi.fixed_fd(),
-                                    buf_id,
+                                    buf_id: Some(buf_id),
                                     buf_len,
                                     buf_grp: rcv_multi.buf_grp_id(),
+                                    shutdown,
                                 }))
                                 .unwrap();
                             SubmissionRecordStatus::Retain

@@ -72,10 +72,13 @@ fn main() {
 
     // Setup Listener behaviour on_accept
     listener
-        .accept_with_cb(&mut bp_listener, |ud, stream| {
+        .accept_with_cb(&mut bp_listener, |ud, stream, shutdown| {
             let id = stream.fixed_fd().unwrap() as usize;
-
             stream.run_blueprints(&mut ud[id - 1]).unwrap();
+            if shutdown {
+                println!("Stream shutting down. Resetting Orbit from Blueprint.");
+                ud[id - 1] = ytls_server_blueprints();
+            }
         })
         .unwrap();
 

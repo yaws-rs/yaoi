@@ -31,9 +31,10 @@ pub(crate) struct MapSentZc {
 #[derive(Clone, Debug, Default)]
 pub(crate) struct MapRecvMulti {
     pub(crate) fixed_fd: u32,
-    pub(crate) buf_id: u16,
+    pub(crate) buf_id: Option<u16>,
     pub(crate) buf_len: usize,
     pub(crate) buf_grp: u16,
+    pub(crate) shutdown: bool,
 }
 
 // Usages:

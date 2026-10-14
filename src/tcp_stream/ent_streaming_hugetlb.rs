@@ -93,6 +93,15 @@ fn register_buf_ring(
 }
 
 impl EntHugeTlb {
+    pub(crate) fn destroy(self, bearer: &mut UringBearer<Wrapper>) -> Result<(), YaoiError> {
+        // KTODO
+        self.ring_in.unregister_with_bearer(bearer)
+            .map_err(YaoiError::RingBuf)?;
+        
+        self.hugetbl_in.try_drop().unwrap();
+        self.hugetbl_out.try_drop().unwrap();
+        Ok(())
+    }
     #[inline]
     pub(crate) fn recv_multi(
         &mut self,
@@ -268,11 +277,17 @@ impl EntHugeTlb {
         fixed_fd: u32,
         recv_multi: &mut MapRecvMulti,
     ) -> Result<(), YaoiError> {
+
+        let buf_id = match recv_multi.buf_id {
+            Some(buf_id) => buf_id,
+            None => return Ok(()),
+        };
+        
         println!(
             "cb_recv_multi fixed_fd={} recv_multi={:?}",
             fixed_fd, recv_multi
         );
-        let recv_buf_start_pos = 8192_usize * recv_multi.buf_id as usize;
+        let recv_buf_start_pos = 8192_usize * buf_id as usize;
 
         let maybe_new_end_pos = recv_multi.buf_len + self.cursor.pos_in_end;
 
@@ -287,14 +302,14 @@ impl EntHugeTlb {
         // whether there is revolution
         // (8192 * 256) - 8192 = 2088960 .. 2097152
         let rn_last_buf = 2088960..2097152;
-        if rn_last_buf.contains(&self.cursor.pos_in_end) && recv_multi.buf_id == 0 {
+        if rn_last_buf.contains(&self.cursor.pos_in_end) && buf_id == 0 {
             panic!(
                 "Revolution detected? <first> cur_end = {}, recv_multi = {:?}",
                 self.cursor.pos_in_end, recv_multi
             );
         }
         // TODO maybe it can come out of order what then ?
-        if rn_last_buf.contains(&self.cursor.pos_in_end) && recv_multi.buf_id == 0 {
+        if rn_last_buf.contains(&self.cursor.pos_in_end) && buf_id == 0 {
             panic!(
                 "Revolution detected? <other> cur_end = {}, recv_multi = {:?}",
                 self.cursor.pos_in_end, recv_multi
@@ -630,14 +645,25 @@ impl EntHugeTlb {
                     let app = bp.app_as_mut();
                     let _pos = match cur_level {
                         1 => {
+
+                            let (pre_left_len_in, pre_left_len_out) = intermed.left_lens();
+                            
                             println!("** Invoking App");
                             let pos =
                                 app.advance_with(&mut NothingBurger, &mut intermed, &mut NoRight);
 
                             let (left_len_in, left_len_out) = intermed.left_lens();
                             if left_len_in == 0 && left_len_out == 0 {
-                                println!("No output at App, breaking.");
+                                println!("No input/output at App, breaking.");
                                 return Ok(());
+                            }
+                            if left_len_out == 0
+                                && pre_left_len_in == left_len_in
+                                && pre_left_len_out == left_len_out
+                            {
+                                println!("No output and no changes from App, breaking.");
+                                return Ok(());
+                                
                             }
                             cur_level = 0;
                             pos

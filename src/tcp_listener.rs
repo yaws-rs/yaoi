@@ -58,6 +58,18 @@ impl ListenerSlotCtx {
         };
         Some(s)
     }
+    /// Move TcpStream out and replace it with Created
+    pub fn move_tcpstream_out(mut self) -> Option<TcpStream> {
+        let s = match self {
+            Self::Accepted(s) => s,
+            Self::Reading(s) => s,
+            Self::Writing(s) => s,
+            Self::ReadingAndWriting(s) => s,
+            _ => return None,
+        };
+        self = Self::Created;
+        Some(s)
+    }
 }
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
@@ -109,6 +121,15 @@ fn register_strat_regular(
 
 use std::os::fd::RawFd;
 
+fn nuke_fixed(
+    bearer: &mut UringBearer<Wrapper>,
+    fixed_fd: u32,
+) -> Result<(), YaoiError> {
+    bearer.io_uring().submitter().register_files_update(fixed_fd, &[-1]).unwrap();
+
+    Ok(())
+}
+
 fn register_strat_fixed(
     bearer: &mut UringBearer<Wrapper>,
     listener_fd: i32,
@@ -152,7 +173,7 @@ fn accept_replenish_cc(
     Ok(())
 }
 
-impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<Cfun, Cdata> {
+impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream, bool), Cdata> TcpListener<Cfun, Cdata> {
     /// Listen at local address SocketAddr with the configured pending accept queue capacity and strategy for the listener.
     pub fn listen_with_strategy(
         addr: SocketAddr,
@@ -285,32 +306,38 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                                 );
                             }
 
+                            let mut shutdown = false;
+                            
                             if !io_uring::cqueue::more(e.flags()) {
                                 println!("RecvMulti No-More triggered.");
-                                // KTODO no more recv
-                                SubmissionRecordStatus::Forget
-                            } else {
-                                println!(
-                                    "RecvMulti = {:?}, e = {:?}, rec = {:?}",
-                                    rcv_multi, e, rec
-                                );
-                                let buf_len = e.result() as usize;
-                                let buf_id = match io_uring::cqueue::buffer_select(e.flags()) {
-                                    Some(id) => id,
-                                    None => {
-                                        panic!("RecvMulti must have buffer id... but it didn.t")
-                                    }
-                                };
+                                shutdown = true;
+                            }
+                            
+                            println!(
+                                "RecvMulti = {:?}, e = {:?}, rec = {:?}",
+                                rcv_multi, e, rec
+                            );
+                            let buf_len = e.result() as usize;
+                            let buf_id = match io_uring::cqueue::buffer_select(e.flags()) {
+                                Some(id) => Some(id),
+                                None => {
+                                    println!("RecvMulti should have buffer id... but it didn.t");
+                                    None
+                                }
+                            };
 
-                                u.bundle
-                                    .push(ServerMapMixed::RecvMulti(MapRecvMulti {
-                                        fixed_fd: rcv_multi.fixed_fd(),
-                                        buf_id,
-                                        buf_len,
-                                        buf_grp: rcv_multi.buf_grp_id(),
-                                    }))
-                                    .unwrap();
-                                SubmissionRecordStatus::Retain
+                            u.bundle
+                                .push(ServerMapMixed::RecvMulti(MapRecvMulti {
+                                    fixed_fd: rcv_multi.fixed_fd(),
+                                    buf_id,
+                                    buf_len,
+                                    buf_grp: rcv_multi.buf_grp_id(),
+                                    shutdown,
+                                }))
+                                .unwrap();
+                            match shutdown {
+                                false => SubmissionRecordStatus::Retain,
+                                true => SubmissionRecordStatus::Forget,
                             }
                         }
                         // TODO: Bugs should not happen but we should provide surface for exposing it.
@@ -341,7 +368,7 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
 
                         loop {
                             match &self.a_fn {
-                                Some(f) => f(udata, tcp_stream),
+                                Some(f) => f(udata, tcp_stream, false),
                                 None => {}
                             }
 
@@ -370,10 +397,15 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
 
                         loop {
                             match &self.a_fn {
-                                Some(f) => f(udata, tcp_stream),
+                                Some(f) => f(udata, tcp_stream, rcv_multi.shutdown),
                                 None => {}
                             }
 
+                            // We are shutting down we are not sending anything out
+                            if rcv_multi.shutdown {
+                                break;
+                            }
+                            
                             let sm_send = tcp_stream.send_all_out(&mut self.bearer)?;
                             if sm_send != 0 {
                                 self.bearer.submit().map_err(YaoiError::Bearer)?;
@@ -382,8 +414,21 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                             }
                         }
                         tcp_stream.try_free_buffers(&mut self.bearer)?;
+                        // KTODO - shutdown this stream
                     } else {
                         unreachable!();
+                    }
+
+                    if rcv_multi.shutdown {
+                        let mut p_entry = match self.pool.remove(&slot_u32) {
+                            Some(e) => e,
+                            None => panic!("Pool entry didn't exist anymore?"),
+                        };
+                        if let Some(mut tcp_stream) = p_entry.move_tcpstream_out() {
+                            tcp_stream.destroy(&mut self.bearer);
+                            self.pool.remove(&slot_u32);
+                            nuke_fixed(&mut self.bearer, slot_u32);
+                        }
                     }
                 }
                 ServerMapMixed::Accepted(accepted) => {
@@ -431,7 +476,7 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream), Cdata> TcpListener<
                         }
                     }
                     match &self.a_fn {
-                        Some(f) => f(udata, &mut tcp_stream),
+                        Some(f) => f(udata, &mut tcp_stream, false),
                         None => {}
                     }
 

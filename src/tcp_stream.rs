@@ -137,4 +137,16 @@ impl TcpStream {
             }
         }
     }
+    #[inline]
+    pub(crate) fn destroy(self, bearer: &mut UringBearer<Wrapper>) -> Result<(), YaoiError> {
+        //let maybe_fixed_fd = self.fixed_fd();
+        match self {
+            Self::StreamingHugeTlb(huge_tlb) => {
+                //let fixed_fd = _require_fixed_fd(maybe_fixed_fd)?;
+                huge_tlb.destroy(bearer)?;
+            }
+            _ => {},
+        }
+        Ok(())
+    }
 }
