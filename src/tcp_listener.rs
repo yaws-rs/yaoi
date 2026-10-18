@@ -428,6 +428,7 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream, bool), Cdata> TcpLis
                             tcp_stream.destroy(&mut self.bearer);
                             self.pool.remove(&slot_u32);
                             nuke_fixed(&mut self.bearer, slot_u32);
+
                         }
                     }
                 }
@@ -443,6 +444,17 @@ impl<Cfun: for<'a, 'b> Fn(&'a mut Cdata, &'b mut TcpStream, bool), Cdata> TcpLis
                         }
                     };
 
+                    match self.local_addr {
+                        // SAFETY: We can only have IPv4 Listener through type
+                        SocketAddr::V4(_) => unsafe { self.bearer.add_accept_ipv4(self.reg_mapped_acceptfd, TargetFd::AutoRegistered) }
+                        .map_err(YaoiError::Bearer)?,
+                        // SAFETY: We can only have IPv6 Listener through type
+                        SocketAddr::V6(_) => unsafe { self.bearer.add_accept_ipv6(self.reg_mapped_acceptfd, TargetFd::AutoRegistered) }
+                        .map_err(YaoiError::Bearer)?,
+                    }
+                    
+                    self.bearer.submit().map_err(YaoiError::Bearer)?;
+                    
                     // TODO: regular fd's
                     let mut tcp_stream = match s_addr {
                         Some(s_addr) => TcpStream::Connected(

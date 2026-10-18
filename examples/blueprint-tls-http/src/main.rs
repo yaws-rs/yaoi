@@ -33,11 +33,13 @@ fn clear_server_blueprints() -> Blueprints<0, Orbits> {
 
 use rand::rngs::ThreadRng;
 use rick_roll::RickRoll;
+// Use an App to Mirror request in response and switch all RickRoll to Mirror below
+//use yaws_app_mirror::Mirror;
 use ytls::TlsServerConfig;
 use ytls_rustcrypto::RustCrypto;
 
 fn ytls_server_blueprints(
-) -> Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng, RickRoll>> {
+) -> Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng, RickRoll>> {    
     BlueprintsLayers::<1>::layers([Orbits::YtlsServer(ytls::init_ytls_server())])
         .app(Orbits::H11Server(H11SpecServer::with_defaults().unwrap()))
 }

@@ -524,8 +524,6 @@ impl Right for IntermedBuf {
     }
 }
 
-// TODO: this works as long as clientpool ent is <= u16 - use-case limiattion for hugetbl incremental streaming
-// TOOD nuke this...
 #[inline]
 fn _slot_u16_from_fixed_fd(try_fixed_fd: Option<u32>) -> Result<u16, YaoiError> {
     let test_in_range = 0u32..u16::MAX as u32;
@@ -609,25 +607,19 @@ impl EntHugeTlb {
         loop {
             let _pos = match cur_level {
                 0 => {
-                    //println!("------- Match: 0");
                     let mut left = self.impl_left();
                     let layers = bp.layers_as_mut();
                     let layer = &mut layers[cur_level];
                     let pre_lens = left.left_lens();
-                    //println!("Pre/is_ready<{}>, New lens = {:?}", left.is_ready(), pre_lens);
 
                     let _pos = layer.advance_with(&mut NothingBurger, &mut left, &mut intermed);
                     let lens = left.left_lens();
 
-                    //println!("Post/is_ready<{}>, is_blocked<{}> New lens = {:?}", left.is_ready(), left.left_in_blocked(), lens);
-
                     if lens.1 != 0 {
-                        //println!("Sending out..");
                         return Ok(());
                     }
 
                     if left.is_ready() == false && !left.left_in_blocked() && pre_lens.0 != lens.0 {
-                        //println!("Left is not ready & not blocked with lens.0 changed w/ no output - looping..");
                         continue;
                     }
 
@@ -635,12 +627,10 @@ impl EntHugeTlb {
                         return Ok(());
                     }
                     cur_level += 1;
-                    //println!(" ** Upgrade cur_level >> {cur_level}**");
                     _pos
                 }
                 // Terminal layer - App processing
                 count_layers => {
-                    //println!("------- Match: Layers {cur_level}/{Layers}");
 
                     let app = bp.app_as_mut();
                     let _pos = match cur_level {

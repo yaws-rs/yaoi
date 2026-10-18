@@ -98,7 +98,7 @@ impl RequestHeaderReceiver for RickRoll {
 
 impl RequestBodyReceiver for RickRoll {
     /// Receive a chunk of data
-    fn payload_chunk(&mut self, _chunk: &[u8]) -> RespIndicative {
+    fn req_body_add(&mut self, _chunk: &[u8]) -> RespIndicative {
         todo!()
     }
 }
@@ -110,13 +110,13 @@ impl ResponseSender for RickRoll {
         RespComplete::Resp2xx(Resp2xx::Ok)
     }
     #[inline]
-    fn resp_on_headers<'h>(&'h mut self, at: usize) -> &'h [H11Header<'h>] {
+    fn resp_on_header_count(&mut self) -> usize {
+        1
+    }
+    #[inline]
+    fn resp_on_header<'h>(&'h mut self, at: usize) -> H11Header<'h> {
         println!("got resp_on_headers at: {at}");
-        if at == 0 {
-            &self.headers
-        } else {
-            &[]
-        }
+        self.headers[at]
     }
     #[inline]
     fn resp_body_len(&mut self) -> ResponseBodySize {
