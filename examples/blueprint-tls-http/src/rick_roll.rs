@@ -99,7 +99,7 @@ impl RequestHeaderReceiver for RickRoll {
 impl RequestBodyReceiver for RickRoll {
     /// Receive a chunk of data
     fn req_body_add(&mut self, _chunk: &[u8]) -> RespIndicative {
-        todo!()
+        RespIndicative::GoAhead
     }
 }
 

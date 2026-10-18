@@ -39,7 +39,7 @@ use ytls::TlsServerConfig;
 use ytls_rustcrypto::RustCrypto;
 
 fn ytls_server_blueprints(
-) -> Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng, RickRoll>> {    
+) -> Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng, RickRoll>> {
     BlueprintsLayers::<1>::layers([Orbits::YtlsServer(ytls::init_ytls_server())])
         .app(Orbits::H11Server(H11SpecServer::with_defaults().unwrap()))
 }
