@@ -35,6 +35,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "anonymous-mmap"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3e26e9b301c114b7224d5217c373760705b087a16a8886f15c49ae4376394cc"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -455,7 +464,7 @@ dependencies = [
 
 [[package]]
 name = "io-uring-bearer"
-version = "0.2.0-pre3"
+version = "0.2.0-pre4"
 dependencies = [
  "capacity",
  "hashbrown",
@@ -472,9 +481,9 @@ dependencies = [
 
 [[package]]
 name = "io-uring-bufring"
-version = "0.1.0"
+version = "0.2.0-pre5"
 dependencies = [
- "anonymous-mmap",
+ "anonymous-mmap 0.1.0",
  "io-uring",
  "io-uring-bearer",
  "io-uring-opcode",
@@ -501,7 +510,7 @@ dependencies = [
 
 [[package]]
 name = "io-uring-op-connect"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "capacity",
  "io-uring",
@@ -515,7 +524,7 @@ dependencies = [
 
 [[package]]
 name = "io-uring-op-socket"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "capacity",
  "io-uring",
@@ -529,7 +538,7 @@ dependencies = [
 
 [[package]]
 name = "io-uring-opcode"
-version = "0.2.0-pre3"
+version = "0.2.0-pre4"
 dependencies = [
  "io-uring",
  "io-uring-owner",
@@ -539,7 +548,7 @@ dependencies = [
 
 [[package]]
 name = "io-uring-opcode-sets"
-version = "0.0.1-whatever0"
+version = "0.0.2"
 dependencies = [
  "io-uring",
  "io-uring-op-connect",
@@ -1070,9 +1079,9 @@ dependencies = [
 
 [[package]]
 name = "yaoi"
-version = "0.0.0-scratch0"
+version = "0.0.1"
 dependencies = [
- "anonymous-mmap",
+ "anonymous-mmap 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "blueprint",
  "capacity",
  "hashbrown",
