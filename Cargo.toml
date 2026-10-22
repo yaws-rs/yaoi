@@ -35,5 +35,5 @@ default = []
 #connect = ["dep:io-uring-op-connect"]
 #epoll = ["io-uring-opcode/epoll"]
 
-#[package.metadata.docs.rs]
-#features = ["epoll"]
+[package.metadata.docs.rs]
+features = []
