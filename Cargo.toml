@@ -14,7 +14,7 @@ categories = ["science"]
 blueprint = { version = "0.2.0", default-features = false }
 capacity = "0.1"
 hashbrown = "0.15.2"
-hugepage = { path = "../ylibc/hugepage", version = "0.1.0", default-features = false }
+hugepage = { version = "0.1.0", default-features = false }
 anonymous-mmap = { path = "../ylibc/anonymous_mmap", version = "0.1.0", default-features = false }
 io-uring = { version = "0.7", default-features = false }
 io-uring-bearer = { path = "../io_uring-utils/io-uring-bearer", version = "0.2.0-pre3", features = ["accept_multi", "connect", "socket"] }

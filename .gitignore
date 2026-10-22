@@ -1,2 +1,8 @@
 target
 **/target
+**/*.crt
+**/*.srl
+**/*.csr
+**/*.pem
+**/*.key
+**/*.pfx

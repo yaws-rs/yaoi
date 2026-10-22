@@ -1,0 +1,8 @@
+target
+test_certs/*.crt
+test_certs/*.srl
+test_certs/*.csr
+test_certs/*.pem
+test_certs/*.key
+test_certs/*.pfx
+

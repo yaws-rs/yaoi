@@ -3,28 +3,23 @@ use yaoi::strategy::StrategyListener;
 use yaoi::TcpListener;
 use yaoi::{Blueprints, BlueprintsLayers};
 
-use blueprint::BluePrint;
-use blueprint_h11spec::H11SpecServer;
+use blueprint_h11spec::H11Serving;
 use blueprints_known::Orbits;
 
+/// Set this to your version of Rick in his pure form
+const RICK_BYTES: &'static [u8] = include_bytes!("/tmp/rick-roll.gif");
+
+// Uncomment below to use rustls instead
 //use blueprint_rustls::{TlsServer as RustlsServer, TlsServerConfig as RustlsServerConfig};
 //use std::path::Path;
 
-mod rick_roll;
 mod ytls;
 
-//const CA: &'static str = "../../../tls/test_certs/ca.rsa4096.crt";
-//const CA: &'static str = "../../../tls/test_certs/ca.ed25519.crt";
 const CA: &'static str = "../../../tls/test_certs/ca.prime256v1.crt";
-
-//const CERT: &'static str = "../../../tls/test_certs/rustcryp.to.rsa4096.ca_signed.crt";
-//const CERT: &'static str = "../../../tls/test_certs/rustcryp.to.ed25519.ca_signed.crt";
 const CERT: &'static str = "../../../tls/test_certs/rustcryp.to.prime256v1.ca_signed.crt";
-
-//const KEY: &'static str = "../../../tls/test_certs/rustcryp.to.rsa4096.key";
-//const KEY: &'static str = "../../../tls/test_certs/rustcryp.to.ed25519.key";
 const KEY: &'static str = "../../../tls/test_certs/rustcryp.to.prime256v1.pem";
 
+// Uncomment below & constructor to use cleartext HTTP only
 /*
 fn clear_server_blueprints() -> Blueprints<0, Orbits> {
     BlueprintsLayers::<0>::no_layers()
@@ -32,18 +27,20 @@ fn clear_server_blueprints() -> Blueprints<0, Orbits> {
 } */
 
 use rand::rngs::ThreadRng;
-use rick_roll::RickRoll;
 // Use an App to Mirror request in response and switch all RickRoll to Mirror below
 //use yaws_app_mirror::Mirror;
+use yaws_app_rick_roll::RickRoll;
 use ytls::TlsServerConfig;
 use ytls_rustcrypto::RustCrypto;
 
 fn ytls_server_blueprints(
 ) -> Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng, RickRoll>> {
+    let rick: RickRoll = RickRoll::with_rick(RICK_BYTES);
     BlueprintsLayers::<1>::layers([Orbits::YtlsServer(ytls::init_ytls_server())])
-        .app(Orbits::H11Server(H11SpecServer::with_defaults().unwrap()))
+        .app(Orbits::H11Server(H11Serving::with_app(rick)))
 }
 
+// Uncomment below to use rustls instead
 /*
 fn rustls_server_blueprints() -> Blueprints<1, Orbits<_, _, _>> {
    let tls_config_server =
@@ -66,7 +63,6 @@ fn main() {
         .set_hugetlb(hugepage::HugePageChoice::HUGE_2MB)
         .unwrap();
 
-    //    let mut bp_listener: [Blueprints::<1, Orbits>; 2] = core::array::from_fn(|_| ytls_server_blueprints());
     let mut bp_listener: [Blueprints<1, Orbits<TlsServerConfig, RustCrypto, ThreadRng, RickRoll>>;
         2] = core::array::from_fn(|_| ytls_server_blueprints());
     //    let mut bp_listener: [Blueprints::<1, Orbits>; 2] = core::array::from_fn(|_| rustls_server_blueprints());

@@ -12,17 +12,18 @@ categories = ["science"]
 
 [dependencies]
 blueprint = { version = "0.2.0", default-features = false }
-blueprints-known = { path = "../../../blueprint/known", version = "0.2.0", default-features = false, features = ["ytls-server", "h11server", "rustls"] }
-blueprint-ytls = { path = "../../../tls/ytls-blueprint", version = "0.0.1", default-features = false, features = ["server", "zeroize"] }
-blueprint-rustls = { path = "../../../tls/rustls-blueprint", version = "0.0.1", default-features = false, features = ["std", "util"] }
+blueprints-known = { version = "0.3.0", default-features = false, features = ["ytls-server", "h11server"] }
+blueprint-ytls = { version = "0.0.1", default-features = false, features = ["server", "zeroize"] }
+blueprint-h11spec = { version = "0.0.5", default-features = false, features = ["h11server"] }
+yaws-app-mirror = { version = "0.0.5", default-features = false }
+yaws-app-rick-roll = { version = "0.0.5", default-features = false }
 ytls-rustcrypto = { version = "0.0.3" }
+#blueprint-rustls = { path = "../../../tls/rustls-blueprint", version = "0.0.1", default-features = false, features = ["std", "util"] }
 rand = { version = "0.10", default-features = false, features = ["thread_rng"] }
 pem-rfc7468 = { version = "1", default-features = false, features = ["alloc"] }
 sec1 = { version = "0.8", default-features = false }
-blueprint-h11spec = { path = "../../../h11spec/blueprint", default-features = false, features = ["h11server"] }
-yaws-app-mirror = { path = "../../../h11spec/apps/mirror", default-features = false }
 yaoi = { path = "../../", version = "0.0.0-scratch0", default-features = false }
-hugepage = { path = "../../../ylibc/hugepage", version = "0.1.0", default-features = false }
+hugepage = { version = "0.1.0", default-features = false }
 
 [features]
 default = []

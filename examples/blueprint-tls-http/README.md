@@ -4,6 +4,18 @@ yaoi Example of Blueprint with TLS and HTTP Server on top of it
 
 It requires Linux kernel 6.12 or newer and free 2MB HugeTLBs.
 
+# Usage
+
+Generate the required TLS certificate & key material
+```ignore
+cd test_certs; make prime256v1
+```
+
+Cargo run
+```ignore
+cargo run --release
+```
+
 ## Continuous Buffers
 
 We leverage continuous ring buffers (on HugeTLB) which require a kernel version 6.12 or newer.
