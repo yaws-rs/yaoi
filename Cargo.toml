@@ -1,6 +1,6 @@
 [package]
 name = "yaoi"
-version = "0.0.0-scratch0"
+version = "0.0.1"
 edition = "2021"
 description = "yaws io_uring I/O"
 homepage = "https://github.com/yaws-rs/yaoi"
